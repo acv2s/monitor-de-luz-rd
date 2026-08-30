@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="csrf-token" content="AAAA-token-BBBB"><title>Teleconsumo</title></head>
+<body>
+<div class="page-content">
+<div class="page-header"><h1>Teleconsumo</h1></div>
+<div class="row">
+ <div class="col-md-5 col-xs-12">
+  <table class="table table-bordered table-hover">
+   <tr><th>Titular</th><td>JUAN ANTONIO PEREZ EJEMPLO</td></tr>
+   <tr><th>Tipo Cliente</th><td>Domesticos (urbanos y rurales)</td></tr>
+   <tr><th>Direcci&oacute;n</th><td>CALLE EJEMPLO # 100</td></tr>
+   <tr><th>Localidad</th><td>SECTOR EJEMPLO</td></tr>
+   <tr><th>Provincia</th><td>PROVINCIA EJEMPLO</td></tr>
+  </table>
+ </div>
+ <div class="col-md-5 col-xs-12">
+  <table class="table table-bordered table-hover">
+   <tr><th>Nic</th><td>1234567</td></tr>
+   <tr><th>Medidor</th><td>11223344</td></tr>
+   <tr><th>Bidireccional</th><td>NO</td></tr>
+   <tr><th>Tarifa</th><td>BN1</td></tr>
+  </table>
+ </div>
+</div>
+<div class="row">
+ <div class="col-md-5 col-sm-12">
+  <table class="table table-bordered table-hover">
+   <tr><th>Activa Entregada (Kwh)</th><td>43853.548</td><th>Fecha Lectura</th><td>27/08/2026</td></tr>
+   <tr></tr>
+   <tr><th>Activa Entregada (Kwh)</th><td>43853.548</td><th>Fecha Lectura</th><td>27/08/2026</td></tr>
+  </table>
+ </div>
+ <div class="col-md-5 col-sm-12">
+  <table class="table table-bordered table-hover">
+   <tr><th>Activa Entregada (Kwh)</th><td>43853.548</td></tr>
+  </table>
+ </div>
+</div>
+<div class="row">
+ <div class="col-md-5 col-xs-12">
+  <table class="table table-bordered table-hover">
+   <tr><th>Fecha &uacute;ltima Factura</th><td>15/08/2026</td></tr>
+   <tr><th>Datos disponibles hasta el d&iacute;a</th><td>27/08/2026</td></tr>
+   <tr><td colspan="2" style="background:#1e6fd9"></td></tr>
+   <tr><th>Consumo hasta la fecha (kWh)</th><td>281</td></tr>
+   <tr><th>Proyecci&oacute;n de consumo (kWh)</th><td>725</td></tr>
+   <tr><th>D&iacute;a de mayor consumo</th><td>15/08/2026</td></tr>
+   <tr><th>Valor de consumo (kWh)</th><td>30</td></tr>
+  </table>
+ </div>
+ <div class="col-md-5 col-xs-12">
+  <div class="widget-box"><div class="widget-header"><h5>Proyecci&oacute;n de Consumo</h5></div>
+  <div id="proyHolder" style="height:150px"></div></div>
+ </div>
+</div>
+<div id="placeholder" style="height:300px"></div>
+</div>
+<script>
+jQuery(function($){
+  var proy = [ [ 'kwh Ent', 281 ] ];
+  $.plot('#proyHolder', [{ data: [[0, 725]] }], { yaxis: { max: 800 } });
+  var data = [["15",30],["16",25],["17",18],["18",24],["19",26],["20",25],["21",27],["22",24],["23",17],["24",23],["25",21],["26",22],["27",0],["28",0]];
+  $.plot('#placeholder', [{ label: 'KWh Entregados', data: data, bars: { show: true } }], { xaxis: { mode: 'categories' } });
+});
+</script>
+</body></html>

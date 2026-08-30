@@ -1,0 +1,31 @@
+{
+  "name": "monitor-de-luz",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monitor de Luz: controla tu factura eléctrica en República Dominicana con historial, gráficas y avisos por Telegram.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "run:local": "tsx scripts/run-local.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
+    "next": "^15.1.0",
+    "pdfjs-dist": "^5.4.0",
+    "postgres": "^3.4.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "dotenv": "^16.4.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
