@@ -1,5 +1,6 @@
 import { sql } from './db';
 import { setting, settingNumber } from './settings';
+import { distribuidora } from './utilities';
 
 export interface Contrato {
   id: number;
@@ -31,13 +32,13 @@ export async function contratoDelDueno(): Promise<Contrato | null> {
   if (existente) return existente;
 
   // Primera vez: se migra lo que había en la configuración global.
-  const email = await setting('EDENORTE_EMAIL');
-  const password = await setting('EDENORTE_PASSWORD');
+  const email = await setting('PORTAL_EMAIL');
+  const password = await setting('PORTAL_PASSWORD');
   if (!email && !password) return null;
   const [creado] = await db<Contrato[]>`
     INSERT INTO contracts (nombre, utility, email, password, nic, goal_mode, budget_rd, kwh_threshold, owner_id)
     VALUES ('Mi casa', ${await setting('UTILITY')}, ${email}, ${password},
-            ${(await setting('EDENORTE_NIC')) || null}, ${await setting('GOAL_MODE')},
+            ${(await setting('PORTAL_NIC')) || null}, ${await setting('GOAL_MODE')},
             ${(await settingNumber('MONTHLY_BUDGET_RD')) || null}, ${await settingNumber('KWH_THRESHOLD')}, NULL)
     RETURNING *`;
   // los datos que ya existían son de este contrato
@@ -128,9 +129,9 @@ export async function verificarContrato(id: number): Promise<{ ok: boolean; nics
   if (!c.email || !c.password) {
     return { ok: false, nics: [], error: 'Faltan el correo y la contraseña de tu oficina virtual.' };
   }
-  const { EdenorteClient } = await import('./edenorte');
+  const { PortalClient } = await import('./portal');
   try {
-    const client = new EdenorteClient(c.email, c.password);
+    const client = new PortalClient(c.email, c.password, distribuidora(c.utility).base);
     await client.login();
     const nics = c.nic?.trim() ? [c.nic.trim()] : await client.getContracts();
     await db`UPDATE contracts SET verificado_at = now(), verificado_ok = true, verificado_error = NULL WHERE id = ${id}`;

@@ -97,7 +97,7 @@ Con eso cualquier asistente tiene el contexto para guiarte.
 
 **¿Por qué los últimos 2 días salen vacíos?** La distribuidora publica el consumo con ~2 días de atraso. Es normal; la app y el bot lo saben y no lo alarman.
 
-**¿Funciona con Edesur o EdeEste?** Todavía no: solo Edenorte está verificada. Si sabes leer HTML y quieres ayudar, los lectores viven en `lib/` y el patrón está en `lib/edenorte.ts`.
+**¿Funciona con Edesur o EdeEste?** Todavía no: solo Edenorte está verificada. Si sabes leer HTML y quieres ayudar, los lectores viven en `lib/` y el patrón está en `lib/portal.ts` y la lista en `lib/utilities.ts`.
 
 ## Desarrollo local
 

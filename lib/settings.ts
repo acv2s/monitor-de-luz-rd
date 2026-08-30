@@ -12,7 +12,7 @@ export const CLAVES = [
   // Dirección pública de la app (para los enlaces del bot)
   'APP_URL',
   // Distribuidora y cuenta
-  'UTILITY', 'EDENORTE_EMAIL', 'EDENORTE_PASSWORD', 'EDENORTE_NIC',
+  'UTILITY', 'PORTAL_EMAIL', 'PORTAL_PASSWORD', 'PORTAL_NIC',
   // Telegram
   'TELEGRAM_ENABLED', 'TELEGRAM_BOT_TOKEN', 'CRON_SECRET', 'DAILY_SUMMARY',
   // Asistente
@@ -29,7 +29,7 @@ export type Clave = (typeof CLAVES)[number];
 
 /** Claves que nunca se muestran completas en el panel. */
 export const SECRETAS: Clave[] = [
-  'EDENORTE_PASSWORD', 'TELEGRAM_BOT_TOKEN', 'CRON_SECRET',
+  'PORTAL_PASSWORD', 'TELEGRAM_BOT_TOKEN', 'CRON_SECRET',
   'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY', 'ELEVENLABS_API_KEY',
 ];
 
@@ -63,8 +63,12 @@ async function migrarDesdeEntorno(valores: Map<string, string>): Promise<void> {
   if (valores.has(MARCA_MIGRADO)) return;
   const db = sql();
   const traidos: string[] = [];
+  const ALIAS: Partial<Record<Clave, string>> = {
+    PORTAL_EMAIL: 'PORTAL_EMAIL', PORTAL_PASSWORD: 'PORTAL_PASSWORD', PORTAL_NIC: 'PORTAL_NIC',
+  };
   for (const clave of CLAVES) {
-    const env = (process.env[clave] || '').trim();
+    const alias = ALIAS[clave];
+    const env = (process.env[clave] || (alias ? process.env[alias] : '') || '').trim();
     if (!env || valores.get(clave)) continue;
     await db`INSERT INTO settings (clave, valor) VALUES (${clave}, ${env})
              ON CONFLICT (clave) DO NOTHING`;
@@ -77,6 +81,29 @@ async function migrarDesdeEntorno(valores: Map<string, string>): Promise<void> {
   if (traidos.length) console.log('[settings] importados del entorno:', traidos.join(', '));
 }
 
+/**
+ * Las claves de la oficina virtual se llamaban EDENORTE_*. Se renombraron a
+ * PORTAL_* para que el proyecto no quede atado a una distribuidora; esto
+ * copia lo que ya estuviera guardado con el nombre viejo.
+ */
+const RENOMBRADAS: [string, Clave][] = [
+  ['PORTAL_EMAIL', 'PORTAL_EMAIL'],
+  ['PORTAL_PASSWORD', 'PORTAL_PASSWORD'],
+  ['PORTAL_NIC', 'PORTAL_NIC'],
+];
+
+async function migrarClavesViejas(valores: Map<string, string>): Promise<void> {
+  const db = sql();
+  for (const [vieja, nueva] of RENOMBRADAS) {
+    const valor = valores.get(vieja);
+    if (!valor || valores.get(nueva)) continue;
+    await db`INSERT INTO settings (clave, valor) VALUES (${nueva}, ${valor})
+             ON CONFLICT (clave) DO NOTHING`;
+    valores.set(nueva, valor);
+    console.log(`[settings] ${vieja} copiada a ${nueva}`);
+  }
+}
+
 /** Carga la configuración (con caché corto). */
 export async function loadSettings(force = false): Promise<Map<string, string>> {
   if (!force && cache && Date.now() - cache.at < TTL_MS) return cache.valores;
@@ -84,6 +111,7 @@ export async function loadSettings(force = false): Promise<Map<string, string>> 
   try {
     const rows = await sql()<{ clave: string; valor: string }[]>`SELECT clave, valor FROM settings`;
     for (const r of rows) if (r.valor) valores.set(r.clave, r.valor);
+    await migrarClavesViejas(valores);
     await migrarDesdeEntorno(valores);
   } catch (e: any) {
     console.error('[settings] no se pudo leer la tabla:', e.message);

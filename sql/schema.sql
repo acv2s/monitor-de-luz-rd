@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS daily_consumption (
 
 -- Facturas descargadas del Historial de Facturación
 CREATE TABLE IF NOT EXISTS invoices (
-  id               TEXT PRIMARY KEY,       -- id del PDF en Edenorte (ej. 1234567097)
+  id               TEXT PRIMARY KEY,       -- id del PDF en la oficina virtual (ej. 1234567097)
   nic              TEXT NOT NULL,
   numero_factura   TEXT,
   fecha_emision    DATE,

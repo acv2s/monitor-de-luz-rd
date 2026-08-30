@@ -1,5 +1,5 @@
 import { sql, ensureSchema } from './db';
-import { EdenorteClient } from './edenorte';
+import { PortalClient } from './portal';
 import { extractPdfItems } from './pdf';
 import { parseInvoiceItems, type TeleconsumoData } from './parsers';
 import { sendTelegram, sendTelegramPhoto, sendTelegramTo, sendTelegramPhotoTo } from './telegram';
@@ -10,9 +10,13 @@ import { explainInvoice, fmtRD, fmtDate, monthLabel } from './analysis';
 import { setting, settingNumber, settingBool } from './settings';
 import { getThreshold } from './goal';
 import { contratosActivos, type Contrato } from './contracts';
+import { distribuidora } from './utilities';
 
 
 type Level = 'info' | 'warning' | 'critical';
+
+/** Cómo se identifica la cuenta en los avisos: su nombre, sin marcas ajenas. */
+const etiquetaDe = (c: Contrato) => c.nombre || `Contrato ${c.id}`;
 
 /**
  * Avisa solo a los chats ligados a ese contrato: cada quien recibe lo de su
@@ -33,7 +37,7 @@ async function avisarFoto(cid: number | null, url: string, caption: string): Pro
 }
 
 /** Registra la alerta si no existe (por dedupe_key) y la envía por Telegram. */
-async function alert(cid: number | null, nic: string, rule: string, dedupeKey: string, level: Level, message: string, log: string[]) {
+async function alert(cid: number | null, nic: string, rule: string, dedupeKey: string, level: Level, message: string, log: string[], cuenta = 'Tu cuenta') {
   const db = sql();
   const inserted = await db`
     INSERT INTO alerts (contract_id, nic, rule, dedupe_key, level, message)
@@ -50,7 +54,7 @@ async function alert(cid: number | null, nic: string, rule: string, dedupeKey: s
     id = prev.id;
   }
   const icon = level === 'critical' ? '🚨' : level === 'warning' ? '⚠️' : 'ℹ️';
-  const ok = await avisarContrato(cid, `${icon} <b>Edenorte · NIC ${nic}</b>\n${message}`);
+  const ok = await avisarContrato(cid, `${icon} <b>${cuenta} · NIC ${nic}</b>\n${message}`);
   await db`UPDATE alerts SET sent = ${ok}, message = ${message} WHERE id = ${id}`;
   log.push(`alerta[${rule}] ${ok ? 'enviada' : 'NO enviada'}: ${message.slice(0, 80)}`);
 }
@@ -89,23 +93,23 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
   const restantes = t.datosHasta && t.fechaUltimaFactura
     ? Math.max(0, 31 - Math.round((Date.parse(t.datosHasta) - Date.parse(t.fechaUltimaFactura)) / 86400000))
     : null;
-  const resumen = `Consumo del ciclo (desde ${fmtDate(t.fechaUltimaFactura)}): <b>${consumo} kWh</b> hasta ${fmtDate(t.datosHasta)}. Proyección Edenorte: <b>${proy} kWh</b>. Promedio ${avg.toFixed(1)} kWh/día${restantes != null ? `, faltan ~${restantes} días` : ''}.`;
+  const resumen = `Consumo del ciclo (desde ${fmtDate(t.fechaUltimaFactura)}): <b>${consumo} kWh</b> hasta ${fmtDate(t.datosHasta)}. Proyección del portal: <b>${proy} kWh</b>. Promedio ${avg.toFixed(1)} kWh/día${restantes != null ? `, faltan ~${restantes} días` : ''}.`;
 
   // 1) Ya superó el umbral
   if (consumo >= THRESHOLD) {
     await alert(c.id, nic, 'consumo_supera_umbral', `consumo>=${THRESHOLD}:${cycle}`, 'critical',
-      `Ya superaste los ${THRESHOLD} kWh en este ciclo. ${resumen}`, log);
+      `Ya superaste los ${THRESHOLD} kWh en este ciclo. ${resumen}`, log, etiquetaDe(c));
   }
   // 2) La proyección supera el umbral
   else if (proy >= THRESHOLD) {
     const margin = restantes != null && avg > 0 ? `Para cerrar por debajo de ${THRESHOLD} tendrías que bajar a ${((THRESHOLD - consumo) / Math.max(1, restantes)).toFixed(1)} kWh/día.` : '';
     await alert(c.id, nic, 'proyeccion_supera_umbral', `proy>=${THRESHOLD}:${cycle}`, 'warning',
-      `La proyección del mes va a superar los ${THRESHOLD} kWh. ${resumen} ${margin}`, log);
+      `La proyección del mes va a superar los ${THRESHOLD} kWh. ${resumen} ${margin}`, log, etiquetaDe(c));
   }
   // 3) Aviso temprano (80%)
   else if (consumo >= THRESHOLD * WARN_RATIO) {
     await alert(c.id, nic, 'consumo_cerca_umbral', `consumo>=${Math.round(THRESHOLD * WARN_RATIO)}:${cycle}`, 'info',
-      `Vas por ${Math.round((consumo / THRESHOLD) * 100)}% del límite de ${THRESHOLD} kWh. ${resumen}`, log);
+      `Vas por ${Math.round((consumo / THRESHOLD) * 100)}% del límite de ${THRESHOLD} kWh. ${resumen}`, log, etiquetaDe(c));
   }
 
   // Resumen diario opcional (DAILY_SUMMARY=true): se manda todos los días, sin dedupe
@@ -127,7 +131,7 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
       cierre = `\n<b>${fmtDate(last.day)}</b>, el último día publicado: ${last.kwh} kWh${juicio}.`;
       if (atrasoDias > 1) cierre += `\n<i>Los últimos ${atrasoDias} días todavía no los publica la distribuidora; es lo normal.</i>`;
     }
-    const ok = await avisarContrato(c.id, `📊 <b>Edenorte · NIC ${nic}</b>\n${resumen}\nVas por el ${pct}% del límite de ${THRESHOLD} kWh.${cierre}`);
+    const ok = await avisarContrato(c.id, `📊 <b>${etiquetaDe(c)} · NIC ${nic}</b>\n${resumen}\nVas por el ${pct}% del límite de ${THRESHOLD} kWh.${cierre}`);
     log.push(`resumen diario ${ok ? 'enviado' : 'NO enviado'}`);
     try {
       const { weeklyChart } = await import('./status');
@@ -145,7 +149,7 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
     const base = others.reduce((a, b) => a + b.kwh, 0) / others.length;
     if (last.kwh >= base * SPIKE_RATIO && last.kwh >= 10) {
       await alert(c.id, nic, 'pico_diario', `pico:${last.day}`, 'warning',
-        `Consumo alarmante el ${fmtDate(last.day)}: <b>${last.kwh} kWh</b> (promedio del ciclo ${base.toFixed(1)} kWh/día, +${Math.round((last.kwh / base - 1) * 100)}%). ¿Aire acondicionado, calentador, algo quedó encendido?`, log);
+        `Consumo alarmante el ${fmtDate(last.day)}: <b>${last.kwh} kWh</b> (promedio del ciclo ${base.toFixed(1)} kWh/día, +${Math.round((last.kwh / base - 1) * 100)}%). ¿Aire acondicionado, calentador, algo quedó encendido?`, log, etiquetaDe(c));
     }
   }
 }
@@ -167,7 +171,7 @@ async function purgeOldPdfs(log: string[]) {
   if (purged.length) log.push(`PDFs archivados (datos conservados): ${purged.length}`);
 }
 
-async function syncInvoices(client: EdenorteClient, c: Contrato, nic: string, dailyRows: { day: string; kwh: number }[], log: string[]) {
+async function syncInvoices(client: PortalClient, c: Contrato, nic: string, dailyRows: { day: string; kwh: number }[], log: string[]) {
   const THRESHOLD = c.kwh_threshold || await getThreshold();
   const db = sql();
   let links: Awaited<ReturnType<typeof client.getHistorial>> = [];
@@ -282,7 +286,7 @@ async function procesarContrato(c: Contrato, log: string[]): Promise<boolean> {
   const cerrar = (ok: boolean) => db`
     UPDATE runs SET finished_at = now(), ok = ${ok}, summary = ${propio.join('\n')} WHERE id = ${run.id}`;
   try {
-    const client = new EdenorteClient(c.email!, c.password!);
+    const client = new PortalClient(c.email!, c.password!, distribuidora(c.utility).base);
     await client.login();
     apunta(`[${etiqueta}] login OK`);
     await db`UPDATE contracts SET verificado_at = now(), verificado_ok = true, verificado_error = NULL WHERE id = ${c.id}`;

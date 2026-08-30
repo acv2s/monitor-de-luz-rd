@@ -4,20 +4,28 @@ import {
   type TeleconsumoData, type InvoiceLink,
 } from './parsers';
 
-const BASE = 'https://ofv.edenorte.com.do';
+import { DISTRIBUIDORAS } from './utilities';
+
+// Base de la oficina virtual: se pasa al crear el cliente. Por defecto, la de
+// la primera distribuidora soportada (ver lib/utilities.ts).
+const BASE_POR_DEFECTO = DISTRIBUIDORAS[0].base;
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 
 /**
- * Cliente HTTP para la Oficina Virtual de Edenorte (Yii2).
+ * Cliente HTTP para la oficina virtual de tu distribuidora (Yii2).
  * - Mantiene la sesión con un "cookie jar" manual.
  * - Maneja el token CSRF de Yii (meta csrf-token / input _csrf).
  * - Todo el contenido es renderizado en servidor: no hace falta navegador headless.
  */
-export class EdenorteClient {
+export class PortalClient {
+  /** Base de la oficina virtual de esta cuenta. */
+  private base: string;
   private cookies = new Map<string, string>();
   loggedIn = false;
 
-  constructor(private email: string, private password: string) {}
+  constructor(private email: string, private password: string, base = BASE_POR_DEFECTO) {
+    this.base = base;
+  }
 
   // ---------- HTTP ----------
 
@@ -38,7 +46,7 @@ export class EdenorteClient {
   }
 
   async request(path: string, init: RequestInit = {}, maxRedirects = 5): Promise<Response> {
-    let url = path.startsWith('http') ? path : BASE + path;
+    let url = path.startsWith('http') ? path : this.base + path;
     let method = init.method || 'GET';
     let body = init.body;
     for (let i = 0; i <= maxRedirects; i++) {
@@ -52,7 +60,7 @@ export class EdenorteClient {
           Accept: 'text/html,application/xhtml+xml,application/pdf,*/*;q=0.8',
           'Accept-Language': 'es-DO,es;q=0.9',
           Cookie: this.cookieHeader(),
-          Referer: BASE + '/',
+          Referer: this.base + '/',
           ...(init.headers as Record<string, string> | undefined),
         },
       });
@@ -84,8 +92,8 @@ export class EdenorteClient {
   async login(): Promise<void> {
     // 1) obtener el formulario (la raíz redirige al login si no hay sesión)
     let html = await this.getHtml('/user/login');
-    if (!EdenorteClient.isLoginPage(html)) html = await this.getHtml('/');
-    if (!EdenorteClient.isLoginPage(html)) {
+    if (!PortalClient.isLoginPage(html)) html = await this.getHtml('/');
+    if (!PortalClient.isLoginPage(html)) {
       // ya hay sesión válida
       this.loggedIn = true;
       return;
@@ -125,17 +133,17 @@ export class EdenorteClient {
     const res = await this.request(action, {
       method: 'POST',
       body: fields.toString(),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: BASE },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: this.base },
     });
     const after = await res.text();
-    if (EdenorteClient.isLoginPage(after)) {
+    if (PortalClient.isLoginPage(after)) {
       const errBlock = after.match(/<div[^>]*class="[^"]*(?:help-block|alert|error-summary|invalid-feedback)[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
       const err = errBlock ? textOf(errBlock[1]) : '';
-      throw new Error('Login fallido' + (err ? `: ${err}` : ' (revisa EDENORTE_EMAIL / EDENORTE_PASSWORD)'));
+      throw new Error('Login fallido' + (err ? `: ${err}` : ' (revisa el correo y la contraseña de tu oficina virtual)'));
     }
     // 3) verificar con una página protegida
     const check = await this.getHtml('/contratos');
-    if (EdenorteClient.isLoginPage(check)) throw new Error('Login fallido: la sesión no quedó activa');
+    if (PortalClient.isLoginPage(check)) throw new Error('Login fallido: la sesión no quedó activa');
     this.loggedIn = true;
   }
 
@@ -152,7 +160,7 @@ export class EdenorteClient {
 
   async getTeleconsumo(nic: string): Promise<{ data: TeleconsumoData; html: string }> {
     const html = await this.getHtml(`/teleconsumo/${nic}`);
-    if (EdenorteClient.isLoginPage(html)) throw new Error('Sesión expirada al leer Teleconsumo');
+    if (PortalClient.isLoginPage(html)) throw new Error('Sesión expirada al leer Teleconsumo');
     const data = parseTeleconsumo(html);
     if (!data.nic) data.nic = nic;
     return { data, html };
@@ -160,7 +168,7 @@ export class EdenorteClient {
 
   async getHistorial(nic: string): Promise<InvoiceLink[]> {
     const html = await this.getHtml(`/historial/${nic}`);
-    if (EdenorteClient.isLoginPage(html)) throw new Error('Sesión expirada al leer Historial');
+    if (PortalClient.isLoginPage(html)) throw new Error('Sesión expirada al leer Historial');
     return parseHistorial(html);
   }
 

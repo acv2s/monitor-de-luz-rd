@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (!rows[0].pdf) {
       return page(
         'PDF no disponible',
-        'La factura está registrada pero Edenorte no entregó su PDF (suele pasar con las facturas más antiguas). Se reintenta en cada corrida diaria.',
+        'La factura está registrada pero la distribuidora no entregó su PDF (suele pasar con las más antiguas). Se reintenta en cada corrida diaria.',
         404,
       );
     }

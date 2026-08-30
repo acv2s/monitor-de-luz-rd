@@ -140,12 +140,12 @@ export function CuentaForm({ campos, distribuidoras }: {
 
       <label className="cfg-row">
         <span className="cfg-l">Correo de la oficina virtual</span>
-        <input type="text" name="EDENORTE_EMAIL" defaultValue={campos.EDENORTE_EMAIL?.valor ?? ''} autoComplete="off" />
+        <input type="text" name="PORTAL_EMAIL" defaultValue={campos.PORTAL_EMAIL?.valor ?? ''} autoComplete="off" />
       </label>
-      <Clave e={campos.EDENORTE_PASSWORD} etiqueta="Contraseña" />
+      <Clave e={campos.PORTAL_PASSWORD} etiqueta="Contraseña" />
       <label className="cfg-row">
         <span className="cfg-l">NIC<small>Opcional: si lo dejas vacío se detecta solo.</small></span>
-        <input type="text" name="EDENORTE_NIC" defaultValue={campos.EDENORTE_NIC?.valor ?? ''} autoComplete="off" />
+        <input type="text" name="PORTAL_NIC" defaultValue={campos.PORTAL_NIC?.valor ?? ''} autoComplete="off" />
       </label>
       <div className="cfg-actions"><button type="submit">Guardar cuenta</button></div>
     </form>

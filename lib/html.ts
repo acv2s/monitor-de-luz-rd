@@ -1,6 +1,6 @@
 /**
  * Mini utilidades de HTML basadas en expresiones regulares.
- * La Oficina Virtual de Edenorte es HTML simple renderizado en servidor (Yii2 + tablas Bootstrap),
+ * La oficina virtual de tu distribuidora es HTML simple renderizado en servidor (Yii2 + tablas Bootstrap),
  * así que no hace falta un parser completo (y evitamos dependencias pesadas en Vercel).
  */
 

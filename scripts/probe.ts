@@ -3,15 +3,15 @@
  *   npm run run:local -- (no) → usa:  npx tsx scripts/probe.ts
  */
 import 'dotenv/config';
-import { EdenorteClient } from '../lib/edenorte';
+import { PortalClient } from '../lib/portal';
 import { extractPdfItems } from '../lib/pdf';
 import { parseInvoiceItems } from '../lib/parsers';
 
 (async () => {
-  const c = new EdenorteClient(process.env.EDENORTE_EMAIL!, process.env.EDENORTE_PASSWORD!);
+  const c = new PortalClient(process.env.PORTAL_EMAIL!, process.env.PORTAL_PASSWORD!);
   await c.login();
   console.log('login OK');
-  const nics = process.env.EDENORTE_NIC ? [process.env.EDENORTE_NIC] : await c.getContracts();
+  const nics = process.env.PORTAL_NIC ? [process.env.PORTAL_NIC] : await c.getContracts();
   console.log('contratos:', nics);
   for (const nic of nics) {
     const { data } = await c.getTeleconsumo(nic);

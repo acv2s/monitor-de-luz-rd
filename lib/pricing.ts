@@ -28,7 +28,7 @@ export async function getPricing(cid: number | null = null): Promise<Pricing | n
   }
   if (!rows.length) return null;
   const precios = rows.map((r) => r.fact / r.consumo_kwh);
-  // El salto de tarifa de Edenorte es a los 700 kWh, independiente de la meta.
+  // El salto de tarifa está a los 700 kWh, independiente de la meta.
   const threshold = 700;
   const altos = rows.filter((r) => r.consumo_kwh >= threshold).map((r) => r.fact / r.consumo_kwh);
   return {

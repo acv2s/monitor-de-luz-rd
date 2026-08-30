@@ -29,7 +29,7 @@ test('parseTeleconsumo lee todos los campos y la serie diaria', () => {
   assert.deepEqual(t.daily[0], { day: '2026-08-15', kwh: 30 });
   assert.deepEqual(t.daily[12], { day: '2026-08-27', kwh: 0 });
   const suma = t.daily.reduce((a, b) => a + b.kwh, 0);
-  assert.equal(suma, 282); // ≈ consumo hasta la fecha (281) — Edenorte redondea
+  assert.equal(suma, 282); // ≈ consumo hasta la fecha (281) — el portal redondea
 });
 
 test('chartToDaily cruza fin de mes', () => {

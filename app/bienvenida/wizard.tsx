@@ -21,7 +21,7 @@ export function Wizard({ campos, botUsuario, distribuidoras }: Props) {
   const [presupuesto, setPresupuesto] = useState(v('MONTHLY_BUDGET_RD'));
   const [kwh, setKwh] = useState(v('KWH_THRESHOLD', '700'));
   const [util, setUtil] = useState(v('UTILITY', 'edenorte'));
-  const [correo, setCorreo] = useState(v('EDENORTE_EMAIL'));
+  const [correo, setCorreo] = useState(v('PORTAL_EMAIL'));
   const [pass, setPass] = useState('');
   const [aviso, setAviso] = useState(Number(v('KWH_WARN_RATIO', '0.8')));
   const [pico, setPico] = useState(Number(v('DAILY_SPIKE_RATIO', '1.6')));
@@ -85,7 +85,7 @@ export function Wizard({ campos, botUsuario, distribuidoras }: Props) {
         <label className="cfg-row">
           <span className="cfg-l">Contraseña</span>
           <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="off"
-            placeholder={campos.EDENORTE_PASSWORD?.valor || ''} />
+            placeholder={campos.PORTAL_PASSWORD?.valor || ''} />
         </label>
       </section>
 
@@ -179,8 +179,8 @@ export function Wizard({ campos, botUsuario, distribuidoras }: Props) {
       <input type="hidden" name="MONTHLY_BUDGET_RD" value={presupuesto} />
       <input type="hidden" name="KWH_THRESHOLD" value={kwh} />
       <input type="hidden" name="UTILITY" value={util} />
-      <input type="hidden" name="EDENORTE_EMAIL" value={correo} />
-      {pass && <input type="hidden" name="EDENORTE_PASSWORD" value={pass} />}
+      <input type="hidden" name="PORTAL_EMAIL" value={correo} />
+      {pass && <input type="hidden" name="PORTAL_PASSWORD" value={pass} />}
       <input type="hidden" name="KWH_WARN_RATIO" value={aviso} />
       <input type="hidden" name="DAILY_SPIKE_RATIO" value={pico} />
       <input type="hidden" name="TELEGRAM_ENABLED" value={String(tg)} />

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { setting } from '@/lib/settings';
 import { ensureSchema } from '@/lib/db';
 import { contratosActivos } from '@/lib/contracts';
-import { EdenorteClient } from '@/lib/edenorte';
+import { PortalClient } from '@/lib/portal';
 import { anotarSonda } from '@/lib/publicacion';
+import { distribuidora } from '@/lib/utilities';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
   const vistas: { contrato: number; datosHasta: string | null; error?: string }[] = [];
   for (const c of await contratosActivos()) {
     try {
-      const client = new EdenorteClient(c.email!, c.password!);
+      const client = new PortalClient(c.email!, c.password!, distribuidora(c.utility).base);
       await client.login();
       const nics = c.nic?.trim() ? [c.nic.trim()] : await client.getContracts();
       if (!nics.length) throw new Error('sin NIC');
