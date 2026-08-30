@@ -58,7 +58,16 @@ async function buildContext(cid: number | null): Promise<string> {
       ? { tipo: 'pagar_menos_de_rd', monto_rd: meta.rd, equivale_a_kwh: THRESHOLD }
       : { tipo: 'no_pasar_de_kwh', kwh: THRESHOLD },
     precios: pricing ? {
-      precio_efectivo_rd_por_kwh: Number(pricing.precioKwh.toFixed(2)),
+      precio_promedio_del_mes_rd_por_kwh: Number(pricing.precioKwh.toFixed(2)),
+      // La tarifa es POR TRAMOS: el kWh siguiente cuesta el marginal, no el promedio.
+      tarifa_por_tramos: pricing.tarifa ? {
+        cargo_fijo_rd: pricing.tarifa.cargoFijo,
+        tramos: pricing.tarifa.tramos,
+        precio_del_siguiente_kwh_rd: pricing.tarifa.precioMarginal,
+        al_pasar_de_kwh: pricing.tarifa.umbral,
+        precio_si_se_pasa_rd: pricing.tarifa.precioAlto,
+        nota: 'Los tramos se aplican en orden. Pasando el umbral se pierden los baratos y TODO el mes se cobra al precio alto.',
+      } : null,
       precio_si_pasa_limite: pricing.precioKwhAlto ? Number(pricing.precioKwhAlto.toFixed(2)) : null,
       gasto_actual_estimado_rd: snap.consumo ? Number(estimateCost(snap.consumo, pricing).toFixed(0)) : null,
       gasto_proyectado_cierre_rd: snap.proyeccion ? Number(estimateCost(snap.proyeccion, pricing).toFixed(0)) : null,
@@ -83,6 +92,7 @@ async function systemPrompt(context: string, threshold: number, atraso: string |
     'Si algo se ve raro (un salto sin explicación, un cobro que no cuadra con el consumo), dilo — pero sin acusar a nadie de robo sin pruebas: señala el dato y sugiere qué revisar o reclamar.',
     `La meta está en el campo "meta" del JSON. El límite operativo es ${threshold} kWh al mes: al pasarse se pierden los tramos baratos y TODOS los kWh se cobran al precio alto.`,
     'Lo que MÁS le importa al usuario es el dinero: cuando aplique, convierte los kWh a pesos dominicanos (RD$) con el campo "precios" y dile cuánto lleva gastado y cuánto pagaría al cierre.',
+    'La tarifa es POR TRAMOS, no un precio plano (mira "tarifa_por_tramos"). Para decir cuánto costaría gastar más, usa "precio_del_siguiente_kwh_rd", NUNCA el promedio del mes: el promedio siempre es más bajo y engaña. Y pasando el umbral se pierden los tramos baratos y todo el mes se recalcula al precio alto, así que ahí el salto es de miles de pesos, no de unos cientos.',
 
     // Lo que más ruido metía: tratar el atraso del portal como si fuera una avería.
     'MUY IMPORTANTE — el atraso de los datos: la oficina virtual publica el consumo con varios días de retraso (mira "publicacion" en el JSON). Que los últimos días salgan vacíos o en cero es el COMPORTAMIENTO NORMAL, no una falla, no una factura que "no salió" ni un consumo de cero. NUNCA lo destaques como problema ni lo repitas en cada respuesta. No cuentes esos días en promedios ni en comparaciones, y no digas que el consumo bajó por ellos. Solo menciona el atraso si te preguntan por qué no aparecen los últimos días.',

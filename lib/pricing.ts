@@ -1,4 +1,5 @@
 import { sql } from './db';
+import { tarifaDe, costoDe, type Tarifa } from './tarifa';
 
 export interface Pricing {
   /** RD$ por kWh efectivo (facturado ÷ kWh, promedio de las últimas facturas leídas). */
@@ -8,6 +9,11 @@ export interface Pricing {
   muestras: number;
   /** Umbral vigente cuando se calcularon los precios. */
   umbral: number;
+  /**
+   * La tarifa real por tramos, si se pudo leer de las facturas. Cuando está,
+   * manda sobre los promedios: el kWh siguiente no cuesta el promedio.
+   */
+  tarifa: Tarifa | null;
 }
 
 
@@ -26,6 +32,7 @@ export async function getPricing(cid: number | null = null): Promise<Pricing | n
     console.error('[pricing] sin datos de facturas:', e.message);
     return null;
   }
+  const tarifa = await tarifaDe(cid);
   if (!rows.length) return null;
   const precios = rows.map((r) => r.fact / r.consumo_kwh);
   // El salto de tarifa está a los 700 kWh, independiente de la meta.
@@ -36,11 +43,20 @@ export async function getPricing(cid: number | null = null): Promise<Pricing | n
     precioKwhAlto: altos.length ? altos.reduce((a, b) => a + b, 0) / altos.length : null,
     muestras: rows.length,
     umbral: threshold,
+    tarifa,
   };
 }
 
-/** Estima el costo en RD$ de una cantidad de kWh, usando la tarifa alta si se pasa del umbral. */
+/**
+ * Costo en RD$ de una cantidad de kWh.
+ *
+ * Con la tarifa por tramos leída de las facturas, se calcula tramo a tramo:
+ * es lo que de verdad cobran. Sin ella se cae al promedio efectivo, que
+ * subestima la proyección porque el kWh siguiente siempre cuesta más que la
+ * media del mes.
+ */
 export function estimateCost(kwh: number, p: Pricing): number {
+  if (p.tarifa) return costoDe(kwh, p.tarifa);
   const precio = kwh >= p.umbral && p.precioKwhAlto ? p.precioKwhAlto : p.precioKwh;
   return kwh * precio;
 }

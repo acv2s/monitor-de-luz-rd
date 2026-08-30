@@ -1,5 +1,6 @@
 import { setting, settingNumber } from './settings';
-import { getPricing } from './pricing';
+import { getPricing, estimateCost } from './pricing';
+import { kwhPorPresupuesto } from './tarifa';
 
 export interface Meta {
   /** 'dinero' = la meta es pagar menos de X; 'kwh' = la meta es no pasar de X kWh. */
@@ -28,9 +29,11 @@ export async function getMeta(cid: number | null = null): Promise<Meta> {
   if (modo === 'dinero') {
     const rd = await settingNumber('MONTHLY_BUDGET_RD');
     if (rd > 0 && precioKwh && precioKwh > 0) {
-      // El límite en kWh nunca sube por encima del umbral de tarifa: pasarlo
-      // encarece todo el mes, así que la meta se respeta con el precio normal.
-      return { modo, kwh: Math.round(rd / precioKwh), rd, precioKwh, sinPrecio: false };
+      // Con los tramos reales, cuántos kWh caben en ese presupuesto; dividir
+      // por el promedio daba un límite demasiado alto, porque los últimos kWh
+      // del mes cuestan bastante más que la media.
+      const kwh = pricing?.tarifa ? kwhPorPresupuesto(rd, pricing.tarifa) : Math.round(rd / precioKwh);
+      return { modo, kwh, rd, precioKwh, sinPrecio: false };
     }
     return { modo, kwh: kwhConfig, rd: rd > 0 ? rd : null, precioKwh, sinPrecio: true };
   }
@@ -38,7 +41,7 @@ export async function getMeta(cid: number | null = null): Promise<Meta> {
   return {
     modo,
     kwh: kwhConfig,
-    rd: precioKwh ? Math.round(kwhConfig * precioKwh) : null,
+    rd: pricing ? Math.round(estimateCost(kwhConfig, pricing)) : null,
     precioKwh,
     sinPrecio: false,
   };
