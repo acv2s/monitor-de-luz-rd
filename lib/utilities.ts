@@ -10,7 +10,10 @@ export interface Distribuidora {
 }
 
 export const DISTRIBUIDORAS: Distribuidora[] = [
-  { id: 'edenorte', nombre: 'Edenorte', base: 'https://oficinavirtual.edenorte.com.do', soportada: true },
+  // OJO: estas direcciones son las que el lector usa de verdad. Cambiar una
+  // por la que "parece" correcta rompe el acceso sin más aviso que un
+  // "fetch failed": el dominio simplemente no existe.
+  { id: 'edenorte', nombre: 'Edenorte', base: 'https://ofv.edenorte.com.do', soportada: true },
   {
     id: 'edesur', nombre: 'Edesur', base: 'https://oficinavirtual.edesur.com.do', soportada: false,
     nota: 'Su oficina virtual usa otro formato; el lector todavía no está probado ahí.',
