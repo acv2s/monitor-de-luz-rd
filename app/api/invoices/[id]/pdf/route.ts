@@ -35,22 +35,41 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const contrato = await contratoDeUsuario(sesion.uid);
     const cid = contrato?.id ?? null;
 
-    const rows = await sql()<{ pdf: Uint8Array | null; existe: boolean }[]>`
-      SELECT pdf, true AS existe FROM invoices
-      WHERE id = ${id} AND (${cid}::bigint IS NULL OR contract_id = ${cid})`;
-    if (!rows.length) {
-      return page('Factura no encontrada', 'Esta factura no está en tu cuenta.', 404);
+    // Se mira primero si la factura existe (sin filtrar), para distinguir "no
+    // es tuya" de "no está guardada" y de "el PDF ya se archivó".
+    const [factura] = await sql()<{ pdf: Uint8Array | null; contract_id: number | null }[]>`
+      SELECT pdf, contract_id FROM invoices WHERE id = ${id}`;
+    if (!factura) {
+      return page('Factura no encontrada', 'Esa factura no está guardada en la app.', 404);
     }
-    if (!rows[0].pdf) {
+    if (cid != null && factura.contract_id !== cid) {
+      return page('Factura de otra cuenta', 'Esta factura no pertenece a tu cuenta de luz.', 403);
+    }
+    if (!factura.pdf) {
       return page(
-        'PDF no disponible',
-        'La factura está registrada pero la distribuidora no entregó su PDF (suele pasar con las más antiguas). Se reintenta en cada corrida diaria.',
+        'PDF archivado',
+        'Los datos de esta factura están guardados, pero su PDF ya no: se borra al pasar la ventana de retención para ahorrar espacio. Puedes cambiar esa ventana en Configuración.',
         404,
       );
     }
-    return new NextResponse(Buffer.from(rows[0].pdf), {
+
+    // Comprobar que lo guardado ES un PDF. Si no y se manda igual como
+    // application/pdf, el navegador solo enseña "No se pudo cargar el
+    // documento PDF", que no dice nada de qué pasó.
+    const bytes = Buffer.from(factura.pdf);
+    if (bytes.subarray(0, 5).toString('latin1') !== '%PDF-') {
+      console.error('[invoice-pdf] contenido no es PDF', id, bytes.length, bytes.subarray(0, 16).toString('latin1'));
+      return page(
+        'El archivo guardado no es un PDF',
+        `Se guardaron ${bytes.length} bytes para esta factura, pero no son un PDF válido. Vuelve a sincronizar desde “Mi cuenta” para bajarlo de nuevo.`,
+        502,
+      );
+    }
+
+    return new NextResponse(bytes, {
       headers: {
         'Content-Type': 'application/pdf',
+        'Content-Length': String(bytes.length),
         'Content-Disposition': `inline; filename="factura-${id}.pdf"`,
         'Cache-Control': 'private, max-age=86400',
       },
