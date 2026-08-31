@@ -32,6 +32,7 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado }: 
   const [paso, setPaso] = useState<Paso>('listo');
   const [detalle, setDetalle] = useState<string | null>(null);
   const [nics, setNics] = useState<string[]>([]);
+  const [detalles, setDetalles] = useState<string[]>([]);
   const elegida = distribuidoras.find((d) => d.id === util);
   const hayCredenciales = !!contrato.email && !!contrato.password;
 
@@ -57,6 +58,7 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado }: 
     try {
       const res = await fetch('/api/sincronizar', { method: 'POST' });
       const j = await res.json();
+      setDetalles(Array.isArray(j.log) ? j.log : []);
       if (j.ok) setPaso('ok');
       else { setPaso('error'); setDetalle(j.error || 'No se pudo leer tu consumo.'); }
     } catch (e: any) {
@@ -153,6 +155,12 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado }: 
                 <div className="meta-now">
                   Listo{nics.length ? `, leímos tu NIC ${nics.join(', ')}` : ''}. <a href="/">Ver mi consumo</a>
                 </div>
+              )}
+              {!!detalles.length && (
+                <details className="sub-plegable">
+                  <summary>Qué se hizo ({detalles.length} pasos)</summary>
+                  <pre className="log">{detalles.join('\n')}</pre>
+                </details>
               )}
               {error && (
                 <div className="meta-now warn">

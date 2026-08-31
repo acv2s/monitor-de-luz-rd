@@ -197,9 +197,18 @@ async function syncInvoices(client: PortalClient, c: Contrato, nic: string, dail
     .filter((l) => !known.has(l.id) || known.get(l.id) === false)
     .sort((a, b) => (a.fechaEmision || '').localeCompare(b.fechaEmision || ''));
 
+  // La función tiene 60 s. Bajar y leer PDFs es lo lento, así que se para
+  // sola antes del límite: lo ya bajado queda guardado y el resto sigue en la
+  // próxima corrida. Antes, quedarse sin tiempo mataba la corrida entera y no
+  // se guardaba ninguna factura — el panel se quedaba sin pesos sin decir por qué.
+  const limite = Date.now() + 40_000;
   let downloaded = 0;
   for (const link of pending) {
-    if (downloaded >= 8) { log.push('quedan facturas por bajar; se continúa mañana'); break; } // límite por corrida (tiempo de función)
+    if (Date.now() > limite) {
+      log.push(`sin tiempo en esta corrida: quedan ${pending.length - downloaded} facturas por bajar, siguen en la próxima`);
+      break;
+    }
+    if (downloaded >= 8) { log.push('quedan facturas por bajar; se continúa mañana'); break; } // límite por corrida
     try {
       const pdf = await client.getInvoicePdf(link.pdfUrl);
       downloaded++;

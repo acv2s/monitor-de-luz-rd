@@ -105,6 +105,9 @@ export default async function Page() {
   const pct = Math.min(100, Math.round((consumo / THRESHOLD) * 100));
   const level = consumo >= THRESHOLD ? 'crit' : proy >= THRESHOLD ? 'warn' : 'good';
   const dias = daily.filter((d) => d.kwh > 0);
+  // Para explicar por qué no hay pesos: ¿hay facturas?, ¿se pudieron leer?
+  const facturasOk = invoices.filter((i: any) => i.parsed_ok).length;
+  const primerError = invoices.find((i: any) => !i.parsed_ok && i.parse_error)?.parse_error ?? null;
   const avg = dias.length ? dias.reduce((a, b) => a + b.kwh, 0) / dias.length : 0;
   const diasTranscurridos = snap?.cycle_start && snap?.datos_hasta ? Math.round((Date.parse(snap.datos_hasta) - Date.parse(snap.cycle_start)) / 86400000) : 0;
   const restantes = Math.max(0, 31 - diasTranscurridos);
@@ -193,6 +196,37 @@ export default async function Page() {
               <ul className="coach-do">
                 {consejo.acciones.map((a, i) => <li key={i} dangerouslySetInnerHTML={{ __html: a }} />)}
               </ul>
+            </section>
+          )}
+
+          {/*
+            Sin facturas leídas no hay precios, y antes el bloque de dinero
+            simplemente desaparecía: el panel quedaba solo en kWh sin decir
+            por qué. Para quien acaba de registrarse eso parece que la app
+            "no calcula".
+          */}
+          {!pricing && (
+            <section className="card">
+              <h2><span className="g-ico">💵</span> Todavía no podemos darte los pesos</h2>
+              <p className="desc">
+                Los montos salen de <b>tus facturas</b>: de ahí se leen los tramos de la tarifa
+                (cuánto cuesta cada kWh). Tu consumo en kWh ya se está midiendo — lo que falta son
+                las facturas.
+              </p>
+              {facturasOk === 0 && invoices.length > 0 ? (
+                <div className="meta-now warn">
+                  Bajamos {invoices.length} factura{invoices.length === 1 ? '' : 's'}, pero no se
+                  pudieron leer{primerError ? `: ${primerError}` : ''}. Vuelve a sincronizar desde
+                  Mi cuenta; si sigue igual, avísale a quien administra la app.
+                </div>
+              ) : (
+                <div className="meta-now">
+                  Aún no hemos bajado ninguna factura. Entra a <b>Mi cuenta</b> y dale a
+                  <b> Sincronizar ahora</b>. La primera vez puede tardar: se bajan varias y se
+                  reparte en más de una corrida, así que puede que necesites repetirlo mañana.
+                </div>
+              )}
+              <a className="wz-next" href="/mi-cuenta">Ir a mi cuenta</a>
             </section>
           )}
 
