@@ -87,7 +87,7 @@ async function saveTeleconsumo(cid: number, nic: string, t: TeleconsumoData, log
   log.push(`teleconsumo: ${t.consumoHastaFechaKwh} kWh hasta ${fmtDate(t.datosHasta)}, proyección ${t.proyeccionKwh} kWh, ${t.daily.length} días guardados`);
 }
 
-async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log: string[]) {
+async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log: string[], silencioso = false) {
   const THRESHOLD = c.kwh_threshold || await getThreshold();
   const WARN_RATIO = await settingNumber('KWH_WARN_RATIO');
   const SPIKE_RATIO = await settingNumber('DAILY_SPIKE_RATIO');
@@ -119,7 +119,10 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
   }
 
   // Resumen diario opcional (DAILY_SUMMARY=true): se manda todos los días, sin dedupe
-  if (await settingBool('DAILY_SUMMARY')) {
+  // En una sincronización pedida a mano no se le escribe a nadie: quien la
+  // pidió ya está mirando el panel, y los demás chats de la cuenta no tienen
+  // por qué recibir un resumen cada vez que alguien toca un botón.
+  if (!silencioso && await settingBool('DAILY_SUMMARY')) {
     const pct = Math.round((consumo / THRESHOLD) * 100);
     const last = dias[dias.length - 1];
     // El portal publica con atraso: el "último día" es el jueves, no hoy. Se
@@ -135,7 +138,20 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
         : dif <= -20 ? ` — ${Math.abs(dif)}% por debajo de tu promedio, así se ahorra`
         : ' — en línea con tu promedio';
       cierre = `\n<b>${fmtDate(last.day)}</b>, el último día publicado: ${last.kwh} kWh${juicio}.`;
-      if (atrasoDias > 1) cierre += `\n<i>Los últimos ${atrasoDias} días todavía no los publica la distribuidora; es lo normal.</i>`;
+
+      // Los picos son lo más accionable: son los días donde de verdad se fue
+      // el dinero, y saberlos es lo que permite corregir a tiempo.
+      if (base > 0) {
+        const picos = dias.filter((d) => d.kwh >= base * SPIKE_RATIO && d.kwh >= 10).slice(-3);
+        if (picos.length) {
+          cierre += `\n\n🔺 <b>Días que se dispararon</b> (promedio ${base.toFixed(1)} kWh/día):`;
+          for (const p of picos) {
+            cierre += `\n• ${fmtDate(p.day)}: <b>${p.kwh} kWh</b> (+${Math.round((p.kwh / base - 1) * 100)}%)`;
+          }
+          cierre += '\n<i>Revisa qué estuvo encendido esos días: ahí es donde se va la factura.</i>';
+        }
+      }
+      if (atrasoDias > 1) cierre += `\n\n<i>Los últimos ${atrasoDias} días todavía no los publica la distribuidora; es lo normal.</i>`;
     }
     const ok = await avisarContrato(c.id, `📊 <b>${etiquetaDe(c)} · NIC ${nic}</b>\n${resumen}\nVas por el ${pct}% del límite de ${THRESHOLD} kWh.${cierre}`);
     log.push(`resumen diario ${ok ? 'enviado' : 'NO enviado'}`);
@@ -290,7 +306,7 @@ async function syncInvoices(client: PortalClient, c: Contrato, nic: string, dail
  * Baja y guarda los datos de UN contrato. Devuelve false si falló, sin tumbar
  * al resto de la corrida.
  */
-async function procesarContrato(c: Contrato, log: string[]): Promise<boolean> {
+async function procesarContrato(c: Contrato, log: string[], silencioso = false): Promise<boolean> {
   const db = sql();
   const etiqueta = c.nombre || `contrato ${c.id}`;
   // Cada contrato deja su propia corrida: en el panel, cada quien ve la suya.
@@ -314,7 +330,7 @@ async function procesarContrato(c: Contrato, log: string[]): Promise<boolean> {
       // Anota lo que veía el portal, para aprender su hora de publicación.
       await anotarSonda(c.id, data.datosHasta ?? null);
       await saveTeleconsumo(c.id, nic, data, propio);
-      await evaluateAlerts(c, nic, data, propio);
+      await evaluateAlerts(c, nic, data, propio, silencioso);
       const dailyRows = await db<{ day: string; kwh: number }[]>`
         SELECT to_char(day,'YYYY-MM-DD') AS day, kwh::float AS kwh
         FROM daily_consumption WHERE nic = ${nic} ORDER BY day`;
@@ -345,7 +361,7 @@ export interface RunResult { ok: boolean; log: string[]; error?: string }
  * cuando alguien acaba de poner sus credenciales y no quiere esperar a
  * mañana para ver sus datos.
  */
-export async function runContrato(cid: number): Promise<RunResult> {
+export async function runContrato(cid: number, silencioso = true): Promise<RunResult> {
   const log: string[] = [];
   await ensureSchema();
   const db = sql();
@@ -354,7 +370,7 @@ export async function runContrato(cid: number): Promise<RunResult> {
   if (!c.email || !c.password) {
     return { ok: false, log, error: 'Faltan el correo y la contraseña de tu oficina virtual.' };
   }
-  const ok = await procesarContrato(c, log);
+  const ok = await procesarContrato(c, log, silencioso);
   return ok ? { ok: true, log } : { ok: false, log, error: log[log.length - 1] ?? 'No se pudo leer tu cuenta.' };
 }
 

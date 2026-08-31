@@ -37,7 +37,9 @@ const DEFECTOS: Partial<Record<Clave, string>> = {
   KWH_THRESHOLD: '700',
   KWH_WARN_RATIO: '0.8',
   DAILY_SPIKE_RATIO: '1.6',
-  PDF_RETENTION_MONTHS: '12',
+  // 0 = no se borra ninguno. La distribuidora sí borra los suyos del portal:
+  // el archivo de la app es justo lo que queda cuando allá desaparecen.
+  PDF_RETENTION_MONTHS: '0',
   GOAL_MODE: 'dinero',
   UTILITY: 'edenorte',
   ASSISTANT_PROVIDER: 'anthropic',
@@ -53,6 +55,7 @@ const DEFECTOS: Partial<Record<Clave, string>> = {
 let cache: { at: number; valores: Map<string, string> } | null = null;
 const TTL_MS = 15_000; // los cambios del panel se ven casi al instante
 const MARCA_MIGRADO = '__migrado_desde_entorno';
+const MARCA_RETENCION = '__retencion_a_siempre';
 
 /**
  * La primera vez, copia a la base de datos lo que estuviera en variables de
@@ -104,6 +107,27 @@ async function migrarClavesViejas(valores: Map<string, string>): Promise<void> {
   }
 }
 
+/**
+ * El archivo de facturas existe porque la distribuidora borra las suyas. Una
+ * retención corta hacía justo lo contrario: iba borrando los PDF guardados.
+ * Se pasa una sola vez a "no borrar nunca"; quien quiera una ventana la
+ * vuelve a poner en el panel y esto ya no la toca.
+ */
+async function migrarRetencion(valores: Map<string, string>): Promise<void> {
+  if (valores.has(MARCA_RETENCION)) return;
+  const db = sql();
+  const actual = Number(valores.get('PDF_RETENTION_MONTHS') ?? '');
+  if (actual > 0) {
+    await db`INSERT INTO settings (clave, valor) VALUES ('PDF_RETENTION_MONTHS', '0')
+             ON CONFLICT (clave) DO UPDATE SET valor = '0'`;
+    valores.set('PDF_RETENTION_MONTHS', '0');
+    console.log(`[settings] retención de PDF pasada de ${actual} meses a "no borrar"`);
+  }
+  await db`INSERT INTO settings (clave, valor) VALUES (${MARCA_RETENCION}, ${new Date().toISOString()})
+           ON CONFLICT (clave) DO NOTHING`;
+  valores.set(MARCA_RETENCION, 'sí');
+}
+
 /** Carga la configuración (con caché corto). */
 export async function loadSettings(force = false): Promise<Map<string, string>> {
   if (!force && cache && Date.now() - cache.at < TTL_MS) return cache.valores;
@@ -112,6 +136,7 @@ export async function loadSettings(force = false): Promise<Map<string, string>> 
     const rows = await sql()<{ clave: string; valor: string }[]>`SELECT clave, valor FROM settings`;
     for (const r of rows) if (r.valor) valores.set(r.clave, r.valor);
     await migrarClavesViejas(valores);
+    await migrarRetencion(valores);
     await migrarDesdeEntorno(valores);
   } catch (e: any) {
     console.error('[settings] no se pudo leer la tabla:', e.message);
