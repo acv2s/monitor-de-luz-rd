@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Contrato {
@@ -16,6 +16,8 @@ interface Props {
   primera: boolean;
   /** Cómo quedó la última comprobación del acceso, si ya hubo alguna. */
   verificado: { ok: boolean; cuando: string; error: string | null } | null;
+  /** true al volver de guardar: la lectura arranca sola, sin tocar el botón. */
+  arrancarSolo?: boolean;
 }
 
 type Paso = 'listo' | 'probando' | 'bajando' | 'ok' | 'error';
@@ -25,7 +27,7 @@ type Paso = 'listo' | 'probando' | 'bajando' | 'ok' | 'error';
  * y la comprobación de que esas credenciales sirven. Estaban en tarjetas
  * distintas y no se entendía que una cosa dependía de la otra.
  */
-export function ContratoForm({ contrato, distribuidoras, primera, verificado }: Props) {
+export function ContratoForm({ contrato, distribuidoras, primera, verificado, arrancarSolo }: Props) {
   const router = useRouter();
   const [util, setUtil] = useState(contrato.utility || 'edenorte');
   const [modo, setModo] = useState(contrato.goal_mode === 'kwh' ? 'kwh' : 'dinero');
@@ -35,6 +37,15 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado }: 
   const [detalles, setDetalles] = useState<string[]>([]);
   const elegida = distribuidoras.find((d) => d.id === util);
   const hayCredenciales = !!contrato.email && !!contrato.password;
+  const yaArrancado = useRef(false);
+
+  // Al guardar las credenciales, la lectura empieza sola.
+  useEffect(() => {
+    if (!arrancarSolo || !hayCredenciales || yaArrancado.current) return;
+    yaArrancado.current = true;
+    comprobarYTraer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrancarSolo, hayCredenciales]);
 
   async function probar(): Promise<boolean> {
     setPaso('probando');

@@ -199,46 +199,19 @@ export default async function Page() {
             </section>
           )}
 
-          {/*
-            Sin facturas leídas no hay precios, y antes el bloque de dinero
-            simplemente desaparecía: el panel quedaba solo en kWh sin decir
-            por qué. Para quien acaba de registrarse eso parece que la app
-            "no calcula".
-          */}
-          {!pricing && (
-            <section className="card">
-              <h2><span className="g-ico">💵</span> Todavía no podemos darte los pesos</h2>
-              <p className="desc">
-                Los montos salen de <b>tus facturas</b>: de ahí se leen los tramos de la tarifa
-                (cuánto cuesta cada kWh). Tu consumo en kWh ya se está midiendo — lo que falta son
-                las facturas.
-              </p>
-              {facturasOk === 0 && invoices.length > 0 ? (
-                <div className="meta-now warn">
-                  Bajamos {invoices.length} factura{invoices.length === 1 ? '' : 's'}, pero no se
-                  pudieron leer{primerError ? `: ${primerError}` : ''}. Vuelve a sincronizar desde
-                  Mi cuenta; si sigue igual, avísale a quien administra la app.
-                </div>
-              ) : (
-                <div className="meta-now">
-                  Aún no hemos bajado ninguna factura. Entra a <b>Mi cuenta</b> y dale a
-                  <b> Sincronizar ahora</b>. La primera vez puede tardar: se bajan varias y se
-                  reparte en más de una corrida, así que puede que necesites repetirlo mañana.
-                </div>
-              )}
-              <a className="wz-next" href="/mi-cuenta">Ir a mi cuenta</a>
-            </section>
-          )}
-
           {pricing && (
             <div className="hero money-hero">
               <InfoDot>
-                Estimado con el precio real de tus últimas {pricing.muestras} facturas: {fmtRD(pricing.precioKwh)} por kWh
-                {pricing.precioKwhAlto ? `, y ${fmtRD(pricing.precioKwhAlto)} cuando el mes pasa de ${THRESHOLD} kWh (se pierden los tramos baratos)` : ''}.
+                {pricing.tarifa?.estimada
+                  ? `Aproximado con la tarifa de referencia, porque todavía no hemos leído tus facturas. En cuanto se lean, los montos pasan a ser los tuyos. Pasando de ${THRESHOLD} kWh se pierden los tramos baratos y todo el mes sube.`
+                  : `Calculado con los tramos de tus últimas ${pricing.muestras} facturas: ${fmtRD(pricing.precioKwh)} por kWh de promedio, y ${fmtRD(pricing.tarifa?.precioMarginal ?? pricing.precioKwh)} cada kWh adicional. Pasando de ${THRESHOLD} kWh se pierden los tramos baratos y todo el mes se cobra caro.`}
               </InfoDot>
               <House />
               <div className="money-body">
-                <div className="l">Llevas gastado este ciclo</div>
+                <div className="l">
+                  Llevas gastado este ciclo
+                  {pricing.tarifa?.estimada && <span className="money-aprox"> · aproximado</span>}
+                </div>
                 <div className="big-money">{fmtRD(estimateCost(consumo, pricing))}</div>
                 <div className="money-proj">
                   Al cierre: <b>{fmtRD(estimateCost(proy, pricing))}</b>

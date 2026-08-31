@@ -2,11 +2,11 @@ import { sql } from './db';
 
 /**
  * Las consultas manuales al portal ("comprobar el acceso" y "sincronizar
- * ahora") están limitadas a 3 por persona al día. La oficina virtual no es
+ * ahora") están limitadas a 6 por persona al día. La oficina virtual no es
  * nuestra: machacarla a peticiones es la vía rápida para que bloqueen la
  * cuenta o el scraping completo. La corrida programada no cuenta aquí.
  */
-export const LLAMADAS_POR_DIA = 3;
+export const LLAMADAS_POR_DIA = 6;
 
 export interface Cupo {
   permitido: boolean;

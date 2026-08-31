@@ -38,10 +38,32 @@ export interface Tarifa {
   precioAlto: number | null;
   /** De qué factura salieron estos precios. */
   desde: string | null;
+  /** true si son los precios de referencia, no los de las facturas de esta cuenta. */
+  estimada?: boolean;
 }
 
 /** El salto de tarifa está a los 700 kWh, independiente de la meta. */
 export const UMBRAL_TARIFA = 700;
+
+/**
+ * Tarifa de referencia, tomada de una factura real de 2026 (652 kWh, 30 días).
+ * Sirve para dar montos aproximados desde el primer día, mientras se leen las
+ * facturas de la cuenta. En cuanto haya una factura propia, esta se descarta:
+ * el cargo fijo depende de los días del ciclo y los precios cambian.
+ */
+export const TARIFA_POR_DEFECTO: Tarifa = {
+  tramos: [
+    { kwh: 200, precio: 5.97 },
+    { kwh: 100, precio: 8.51 },
+    { kwh: 400, precio: 13.83 },
+  ],
+  precioMarginal: 13.83,
+  cargoFijo: 126.81,
+  umbral: UMBRAL_TARIFA,
+  precioAlto: 14.04,
+  desde: null,
+  estimada: true,
+};
 
 /** Lee la tarifa real de la última factura de esa cuenta. */
 export async function tarifaDe(cid: number | null): Promise<Tarifa | null> {
@@ -53,7 +75,9 @@ export async function tarifaDe(cid: number | null): Promise<Tarifa | null> {
       WHERE parsed_ok AND tramos IS NOT NULL AND (${cid}::bigint IS NULL OR contract_id = ${cid})
       ORDER BY fecha_emision DESC LIMIT 6`;
     const conTramos = filas.filter((f) => Array.isArray(f.tramos) && f.tramos.length);
-    if (!conTramos.length) return null;
+    // Sin facturas propias todavía: se usan los precios de referencia para no
+    // dejar a la persona sin montos en su primer mes.
+    if (!conTramos.length) return TARIFA_POR_DEFECTO;
 
     // La más reciente que tenga varios tramos: una de más de 700 kWh trae uno
     // solo (todo a tarifa alta) y no sirve para saber los tramos baratos.
@@ -73,7 +97,7 @@ export async function tarifaDe(cid: number | null): Promise<Tarifa | null> {
     };
   } catch (e: any) {
     console.error('[tarifa] no se pudo leer:', e.message);
-    return null;
+    return TARIFA_POR_DEFECTO;
   }
 }
 

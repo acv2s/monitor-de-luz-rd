@@ -50,3 +50,25 @@ test('un presupuesto se traduce a kWh con los tramos, no con el promedio', () =>
   assert.ok(costoDe(kwh, TARIFA) <= 7039.97);
   assert.ok(costoDe(kwh + 1, TARIFA) > 7039.97);
 });
+
+/* ---------- Tarifa de referencia: montos desde el primer día ---------- */
+import { TARIFA_POR_DEFECTO } from '../lib/tarifa.ts';
+
+test('la tarifa de referencia reproduce la factura real de 652 kWh', () => {
+  // Mismos tramos y cargo fijo; solo cambia el tamaño del último tramo, que
+  // es el "resto", así que el total tiene que dar igual.
+  assert.equal(
+    Math.round(costoDe(652, TARIFA_POR_DEFECTO) * 100) / 100,
+    Math.round(costoDe(652, TARIFA) * 100) / 100,
+  );
+});
+
+test('viene marcada como estimada, para no presentarla como propia', () => {
+  assert.equal(TARIFA_POR_DEFECTO.estimada, true);
+  assert.equal(TARIFA_POR_DEFECTO.desde, null);
+});
+
+test('mantiene el salto al pasar de 700 kWh', () => {
+  assert.equal(TARIFA_POR_DEFECTO.umbral, 700);
+  assert.ok(costoDe(700, TARIFA_POR_DEFECTO) - costoDe(699, TARIFA_POR_DEFECTO) > 2000);
+});

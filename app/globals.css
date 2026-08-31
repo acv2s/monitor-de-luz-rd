@@ -781,3 +781,6 @@ details.fold > *:not(summary) { margin: 0 20px 18px; }
 .tag-nuevo { margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 10.5px;
   font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
   background: var(--series-1); color: #fff; vertical-align: middle; }
+
+/* Marca de que el monto es aproximado, sin facturas propias todavía. */
+.money-aprox { color: var(--warning); font-weight: 600; }

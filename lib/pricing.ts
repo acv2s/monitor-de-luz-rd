@@ -33,7 +33,19 @@ export async function getPricing(cid: number | null = null): Promise<Pricing | n
     return null;
   }
   const tarifa = await tarifaDe(cid);
-  if (!rows.length) return null;
+  // Sin facturas leídas todavía, la tarifa de referencia permite dar montos
+  // aproximados desde el primer día en vez de dejar el panel sin pesos.
+  if (!rows.length) {
+    if (!tarifa) return null;
+    const ref = costoDe(500, tarifa) / 500;
+    return {
+      precioKwh: ref,
+      precioKwhAlto: tarifa.precioAlto,
+      muestras: 0,
+      umbral: tarifa.umbral,
+      tarifa,
+    };
+  }
   const precios = rows.map((r) => r.fact / r.consumo_kwh);
   // El salto de tarifa está a los 700 kWh, independiente de la meta.
   const threshold = 700;

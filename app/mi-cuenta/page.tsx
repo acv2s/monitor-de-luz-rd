@@ -76,6 +76,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
           contrato={contrato}
           distribuidoras={DISTRIBUIDORAS}
           primera={!tieneDatos}
+          arrancarSolo={q.sync === '1'}
           verificado={contrato.verificado_at ? {
             ok: !!contrato.verificado_ok,
             cuando: new Date(contrato.verificado_at).toLocaleString('es-DO', {

@@ -33,5 +33,8 @@ export async function POST(req: NextRequest) {
     budget_rd: presupuesto > 0 ? presupuesto : c.budget_rd,
     kwh_threshold: limite > 0 ? limite : c.kwh_threshold,
   });
-  return NextResponse.redirect(new URL('/mi-cuenta?ok=1', req.url), 303);
+  // Si ya hay correo y contraseña, se arranca la lectura sola: no hay que
+  // pedirle a nadie que además le dé a un botón para que la app sirva.
+  const listo = (pass || c.password) && (String(f.get('email') ?? '').trim() || c.email);
+  return NextResponse.redirect(new URL(listo ? '/mi-cuenta?ok=1&sync=1' : '/mi-cuenta?ok=1', req.url), 303);
 }
