@@ -144,3 +144,34 @@ export function kwhPorPresupuesto(rd: number, t: Tarifa): number {
   while (kwh < 5000 && costoDe(kwh + 1, t) <= rd) kwh++;
   return kwh;
 }
+
+export interface LineaDesglose {
+  /** Ej. "200 kWh × RD$5.97" o "Cargo fijo". */
+  etiqueta: string;
+  importe: number;
+}
+
+/**
+ * De dónde sale el total: las mismas líneas que trae la factura. Es lo que
+ * se enseña debajo del número grande, para que se vea que no es un invento.
+ */
+export function desgloseDe(kwh: number, t: Tarifa): LineaDesglose[] {
+  const rd = (n: number) => 'RD$' + n.toFixed(2);
+  const lineas: LineaDesglose[] = [{ etiqueta: 'Cargo fijo', importe: t.cargoFijo }];
+  if (kwh <= 0) return lineas;
+
+  if (kwh >= t.umbral && t.precioAlto) {
+    lineas.push({ etiqueta: `${kwh} kWh × ${rd(t.precioAlto)} (tarifa alta: pasaste los ${t.umbral})`, importe: kwh * t.precioAlto });
+    return lineas;
+  }
+  let restante = kwh;
+  for (let i = 0; i < t.tramos.length - 1 && restante > 0; i++) {
+    const cubre = Math.min(restante, t.tramos[i].kwh);
+    lineas.push({ etiqueta: `${cubre} kWh × ${rd(t.tramos[i].precio)}`, importe: cubre * t.tramos[i].precio });
+    restante -= cubre;
+  }
+  if (restante > 0) {
+    lineas.push({ etiqueta: `${restante} kWh × ${rd(t.precioMarginal)}`, importe: restante * t.precioMarginal });
+  }
+  return lineas;
+}

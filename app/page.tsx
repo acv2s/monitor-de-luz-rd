@@ -13,6 +13,7 @@ import { redirect } from 'next/navigation';
 import { leerCookie, COOKIE } from '@/lib/session';
 import { contratoDeUsuario } from '@/lib/contracts';
 import { getPricing, estimateCost } from '@/lib/pricing';
+import { desgloseDe } from '@/lib/tarifa';
 
 export const dynamic = 'force-dynamic';
 
@@ -217,6 +218,18 @@ export default async function Page() {
                   Al cierre: <b>{fmtRD(estimateCost(proy, pricing))}</b>
                   {meta.rd ? <span className="money-goal"> · meta {fmtRD(meta.rd)}</span> : null}
                 </div>
+                {/* De dónde sale el número grande: las mismas líneas de la factura,
+                    en pequeño, para que se vea que va sumando de verdad. */}
+                {pricing.tarifa && (
+                  <dl className="money-desglose">
+                    {desgloseDe(consumo, pricing.tarifa).map((l) => (
+                      <div key={l.etiqueta}>
+                        <dt>{l.etiqueta}</dt>
+                        <dd>{fmtRD(l.importe)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
               </div>
             </div>
           )}

@@ -784,3 +784,10 @@ details.fold > *:not(summary) { margin: 0 20px 18px; }
 
 /* Marca de que el monto es aproximado, sin facturas propias todavía. */
 .money-aprox { color: var(--warning); font-weight: 600; }
+
+/* Desglose bajo el monto grande: se lee si lo buscas, no compite con él. */
+.money-desglose { margin: 10px 0 0; display: grid; gap: 2px; max-width: 300px;
+  font-size: 11.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.money-desglose > div { display: flex; justify-content: space-between; gap: 12px; }
+.money-desglose dt { margin: 0; font-weight: 400; }
+.money-desglose dd { margin: 0; white-space: nowrap; }

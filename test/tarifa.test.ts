@@ -72,3 +72,28 @@ test('mantiene el salto al pasar de 700 kWh', () => {
   assert.equal(TARIFA_POR_DEFECTO.umbral, 700);
   assert.ok(costoDe(700, TARIFA_POR_DEFECTO) - costoDe(699, TARIFA_POR_DEFECTO) > 2000);
 });
+
+/* ---------- El desglose que se enseña bajo el número grande ---------- */
+import { desgloseDe } from '../lib/tarifa.ts';
+
+test('el desglose suma exactamente el total que se muestra', () => {
+  for (const kwh of [0, 150, 300, 652, 699, 700, 900]) {
+    const lineas = desgloseDe(kwh, TARIFA);
+    const suma = lineas.reduce((a, l) => a + l.importe, 0);
+    assert.ok(Math.abs(suma - costoDe(kwh, TARIFA)) < 0.005, `en ${kwh} kWh: ${suma} vs ${costoDe(kwh, TARIFA)}`);
+  }
+});
+
+test('con 652 kWh salen las mismas líneas de la factura real', () => {
+  const l = desgloseDe(652, TARIFA);
+  assert.equal(l.length, 4); // cargo fijo + 3 tramos
+  assert.match(l[1].etiqueta, /200 kWh × RD\$5\.97/);
+  assert.match(l[2].etiqueta, /100 kWh × RD\$8\.51/);
+  assert.match(l[3].etiqueta, /352 kWh × RD\$13\.83/);
+});
+
+test('pasado el umbral, el desglose dice por qué todo va caro', () => {
+  const l = desgloseDe(750, TARIFA);
+  assert.equal(l.length, 2);
+  assert.match(l[1].etiqueta, /tarifa alta/);
+});
