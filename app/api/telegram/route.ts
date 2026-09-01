@@ -4,7 +4,7 @@ import { sql, ensureSchema } from '@/lib/db';
 import { sendTelegramTo, sendTelegramPhotoTo, sendTelegramVoiceTo, sendChatAction } from '@/lib/telegram';
 import { downloadTelegramFile, transcribe, synthesize, transcriptionAvailable } from '@/lib/voice';
 import { statusMessage, adviceMessage, invoiceMessage, helpMessage, chartUrls, weeklyChart, monthlyDetailMessage } from '@/lib/status';
-import { askAssistant } from '@/lib/assistant';
+import { askAssistant, estadoAsistente } from '@/lib/assistant';
 import { quienEs, vincular } from '@/lib/telegram-link';
 import { urlDeLaApp } from '@/lib/appurl';
 import { sql as db2 } from '@/lib/db';
@@ -147,7 +147,21 @@ export async function POST(req: NextRequest) {
     else if (!yo.puedeAsistente) {
       reply = 'No entendí ese mensaje. Prueba con <b>como voy</b>, <b>consejos</b>, <b>factura</b>, <b>grafica</b> o <b>12 meses</b>.\n\n<i>El asistente que entiende preguntas libres no está habilitado para tu cuenta.</i>';
     }
-    else reply = (await askAssistant(entrada, cid)) ?? helpMessage();
+    else {
+      reply = await askAssistant(entrada, cid);
+      if (reply == null) {
+        // La pregunta SÍ se entendió: es el asistente el que no puede correr.
+        // Responder el menú de ayuda aquí hacía creer que el bot no entendía.
+        const est = await estadoAsistente();
+        const nombreProv: Record<string, string> = { anthropic: 'Claude', openai: 'ChatGPT', google: 'Gemini' };
+        const prov = est.activo ? '' : (nombreProv[est.proveedor] ?? est.proveedor);
+        reply = !est.activo && est.motivo === 'apagado'
+          ? 'Entendí tu pregunta, pero el asistente está <b>apagado</b> en Configuración → Asistente. Enciéndelo y vuelve a preguntarme.'
+          : !est.activo
+          ? `Entendí tu pregunta, pero el proveedor elegido es <b>${prov}</b> y no hay una clave suya guardada. Ponla en Configuración → Asistente, o cambia de proveedor.`
+          : 'Entendí tu pregunta, pero el asistente no pudo responder ahora mismo. Intenta de nuevo en un momento.';
+      }
+    }
   } catch (e: any) {
     console.error('[telegram-webhook]', e);
     reply = '⚠️ No pude consultar los datos ahora mismo: ' + e.message;
@@ -155,7 +169,14 @@ export async function POST(req: NextRequest) {
 
   if (reply) {
     if (porVoz) {
-      await sendTelegramTo(chatId, `🎙️ <i>Te entendí:</i> «${entrada.slice(0, 200)}»`);
+      // El eco se recorta solo para no llenar el chat; la pregunta completa
+      // sí se procesa entera. Se corta en un espacio para no partir palabras.
+      let eco = entrada;
+      if (eco.length > 350) {
+        const corte = eco.lastIndexOf(' ', 350);
+        eco = eco.slice(0, corte > 250 ? corte : 350) + '…';
+      }
+      await sendTelegramTo(chatId, `🎙️ <i>Te entendí completo; en resumen:</i> «${eco}»`);
       const ogg = await synthesize(reply).catch(() => null);
       if (ogg) {
         await sendChatAction(chatId, 'upload_voice');

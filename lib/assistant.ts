@@ -154,6 +154,21 @@ async function pedirAGemini(system: string, pregunta: string, modelo: string, ap
  * Responde una pregunta libre usando el proveedor elegido en el panel
  * (Claude, OpenAI o Gemini). Devuelve null si no hay clave configurada.
  */
+/**
+ * Por qué el asistente no puede responder ahora, si es el caso. El webhook
+ * lo usa para explicarlo: antes, cuando askAssistant devolvía null, el bot
+ * contestaba el menú de ayuda, como si no hubiera entendido la pregunta.
+ */
+export async function estadoAsistente(): Promise<{ activo: true } | { activo: false; motivo: 'apagado' | 'sin_clave'; proveedor: string }> {
+  const proveedor = (await setting('ASSISTANT_PROVIDER')) || 'anthropic';
+  if (!(await settingBool('ASSISTANT_ENABLED'))) return { activo: false, motivo: 'apagado', proveedor };
+  const clave = proveedor === 'openai' ? await setting('OPENAI_API_KEY')
+    : proveedor === 'google' ? await setting('GOOGLE_API_KEY')
+    : await setting('ANTHROPIC_API_KEY');
+  if (!clave) return { activo: false, motivo: 'sin_clave', proveedor };
+  return { activo: true };
+}
+
 export async function askAssistant(question: string, cid: number | null = null): Promise<string | null> {
   if (!(await settingBool('ASSISTANT_ENABLED'))) return null;
   const proveedor = (await setting('ASSISTANT_PROVIDER')) || 'anthropic';
