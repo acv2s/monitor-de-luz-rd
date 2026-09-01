@@ -111,12 +111,16 @@ async function pedirAClaude(system: string, pregunta: string, modelo: string, ap
   const client = new Anthropic({ apiKey });
   const res = await client.messages.create({
     model: modelo || 'claude-sonnet-5',
-    max_tokens: 1200,
+    // Los modelos actuales gastan parte del presupuesto "pensando" antes de
+    // escribir: con un tope corto puede llegar un 200 OK sin ningún texto.
+    max_tokens: 4000,
     output_config: { effort: 'low' },
     system,
     messages: [{ role: 'user', content: pregunta }],
   });
-  return res.content.filter((b) => b.type === 'text').map((b: any) => b.text).join('\n').trim();
+  const texto = res.content.filter((b) => b.type === 'text').map((b: any) => b.text).join('\n').trim();
+  if (!texto) throw new Error(`respuesta vacía (stop: ${res.stop_reason})`);
+  return texto;
 }
 
 async function pedirAOpenAI(system: string, pregunta: string, modelo: string, apiKey: string) {
@@ -125,13 +129,17 @@ async function pedirAOpenAI(system: string, pregunta: string, modelo: string, ap
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: modelo || 'gpt-4o-mini',
-      max_completion_tokens: 1200,
+      // Los modelos con razonamiento gastan parte de este tope pensando; con
+      // un tope corto la respuesta puede llegar vacía.
+      max_completion_tokens: 4000,
       messages: [{ role: 'system', content: system }, { role: 'user', content: pregunta }],
     }),
   });
   if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const j: any = await res.json();
-  return (j.choices?.[0]?.message?.content || '').trim();
+  const texto = (j.choices?.[0]?.message?.content || '').trim();
+  if (!texto) throw new Error(`respuesta vacía (finish: ${j.choices?.[0]?.finish_reason})`);
+  return texto;
 }
 
 async function pedirAGemini(system: string, pregunta: string, modelo: string, apiKey: string) {
@@ -142,12 +150,14 @@ async function pedirAGemini(system: string, pregunta: string, modelo: string, ap
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: 'user', parts: [{ text: pregunta }] }],
-      generationConfig: { maxOutputTokens: 1200 },
+      generationConfig: { maxOutputTokens: 4000 },
     }),
   });
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const j: any = await res.json();
-  return (j.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') || '').trim();
+  const texto = (j.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') || '').trim();
+  if (!texto) throw new Error(`respuesta vacía (finish: ${j.candidates?.[0]?.finishReason})`);
+  return texto;
 }
 
 /**
@@ -195,6 +205,6 @@ export async function askAssistant(question: string, cid: number | null = null):
     return texto || null;
   } catch (e: any) {
     console.error('[assistant]', e.message);
-    return `⚠️ El asistente no pudo responder ahora mismo (${proveedor}). Revisa la clave y el modelo en la configuración.`;
+    return `⚠️ El asistente no pudo responder (${proveedor}: ${e.message}). Si sigue pasando, revisa el modelo y la clave en Configuración → Asistente.`;
   }
 }
