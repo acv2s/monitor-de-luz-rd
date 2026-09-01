@@ -50,7 +50,7 @@ const paths: Record<string, React.ReactElement> = {
 
 /** Casita de consumo eléctrico: ilustración principal del hero (SVG propio). */
 export function House() {
-  if (CASA_PNG) return <img className="house" src={CASA_PNG} alt="" width={330} height={176} />;
+  if (CASA_PNG) return <img className="house" src={CASA_PNG} alt="" width={330} height={173} />;
   return (
     <svg className="house" viewBox="0 0 220 190" aria-hidden>
       <defs>
