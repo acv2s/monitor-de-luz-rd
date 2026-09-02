@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ensureSchema } from '@/lib/db';
 import { leerCookie, COOKIE } from '@/lib/session';
 import { contratoDeUsuario, guardarContrato } from '@/lib/contracts';
+import { marcado } from '@/lib/form';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
     goal_mode: String(f.get('goal_mode') ?? c.goal_mode),
     budget_rd: presupuesto > 0 ? presupuesto : c.budget_rd,
     kwh_threshold: limite > 0 ? limite : c.kwh_threshold,
+    resumen_diario: f.has('resumen_diario') ? marcado(f, 'resumen_diario') : c.resumen_diario,
+    resumen_hora: (() => { const h = Number(f.get('resumen_hora')); return h >= 0 && h <= 23 ? h : c.resumen_hora; })(),
   });
   // Si ya hay correo y contraseña, se arranca la lectura sola: no hay que
   // pedirle a nadie que además le dé a un botón para que la app sirva.

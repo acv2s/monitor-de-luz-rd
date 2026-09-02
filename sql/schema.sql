@@ -232,3 +232,9 @@ CREATE TABLE IF NOT EXISTS manual_calls (
   at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_manual_calls ON manual_calls (user_key, at DESC);
+
+-- ===== Avisos automáticos por cuenta =====
+-- Cada quien decide si quiere el resumen diario por Telegram y a qué hora
+-- (hora de República Dominicana). Apagarlo no apaga las alertas importantes.
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS resumen_diario BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS resumen_hora   SMALLINT NOT NULL DEFAULT 18;

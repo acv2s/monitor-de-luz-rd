@@ -16,6 +16,10 @@ export interface Contrato {
   verificado_at: string | null;
   verificado_ok: boolean | null;
   verificado_error: string | null;
+  /** ¿Quiere el resumen diario por Telegram? Las alertas importantes van igual. */
+  resumen_diario: boolean;
+  /** A qué hora (de República Dominicana, 0–23) le llega el resumen. */
+  resumen_hora: number;
 }
 
 /**
@@ -83,7 +87,8 @@ export async function guardarContrato(id: number, datos: Partial<Contrato>): Pro
     UPDATE contracts SET
       nombre = ${a.nombre}, utility = ${a.utility}, email = ${a.email},
       password = ${a.password}, nic = ${a.nic}, goal_mode = ${a.goal_mode},
-      budget_rd = ${a.budget_rd}, kwh_threshold = ${a.kwh_threshold}
+      budget_rd = ${a.budget_rd}, kwh_threshold = ${a.kwh_threshold},
+      resumen_diario = ${a.resumen_diario}, resumen_hora = ${a.resumen_hora}
     WHERE id = ${id}`;
   // Si cambiaron las credenciales, lo verificado antes ya no vale.
   if (a.email !== c[0].email || a.password !== c[0].password) {

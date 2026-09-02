@@ -76,7 +76,7 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
         <h3>Con cuenta activa</h3>
         {!activos.length ? <p className="mh-note">Todavía nadie más tiene cuenta.</p> : (
           <>
-            <div className="pers-cabecera"><span /><span title="Puede usar el asistente">🤖</span><span title="Puede usar las notas de voz">🎙️</span><span /></div>
+            <div className="pers-cabecera"><span /><span title="Puede usar el asistente">🤖</span><span /></div>
             {activos.map((u) => (
               <div className="pers-item" key={u.id}>
                 <form className="pers-fila" method="post" action="/api/usuarios">
@@ -90,14 +90,11 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
                   </div>
                   <input type="hidden" name="id" value={u.id} />
                   <input type="hidden" name="puede_asistente" value="false" />
-                  <input type="hidden" name="puede_voz" value="false" />
+                  {/* Las notas de voz son para todo el mundo; solo el asistente se cede por persona. */}
+                  <input type="hidden" name="puede_voz" value="true" />
                   <label className="mini-sw" title="Puede usar el asistente">
                     <input type="checkbox" name="puede_asistente" value="true" defaultChecked={u.puede_asistente} />
                     <span>🤖</span>
-                  </label>
-                  <label className="mini-sw" title="Puede usar las notas de voz">
-                    <input type="checkbox" name="puede_voz" value="true" defaultChecked={u.puede_voz} />
-                    <span>🎙️</span>
                   </label>
                   <button className="btn-ok" name="accion" value="permisos">Guardar</button>
                 </form>
@@ -172,11 +169,8 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
               <input type="hidden" name="da_asistente" value="false" />
               <input type="checkbox" name="da_asistente" value="true" />
             </label>
-            <label className="cfg-row switch">
-              <span className="cfg-l">🎙️ Notas de voz<small>💳 gasta tus claves de voz</small></span>
-              <input type="hidden" name="da_voz" value="false" />
-              <input type="checkbox" name="da_voz" value="true" />
-            </label>
+            {/* Las notas de voz vienen incluidas para todo el mundo. */}
+            <input type="hidden" name="da_voz" value="true" />
           </div>
           <div className="cfg-actions"><button type="submit">Crear enlace</button></div>
         </form>
@@ -192,7 +186,6 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
                     {i.contrato_compartido ? ' · ve tu cuenta' : ' · pone la suya'}
                     {i.auto_aprobar ? ' · entra solo' : ' · lo apruebas tú'}
                     {i.da_asistente && ' · con asistente'}
-                    {i.da_voz && ' · con notas de voz'}
                   </small>
                   <EnlaceCopiable url={`${appUrl}/registro?codigo=${i.code}`} />
                 </div>

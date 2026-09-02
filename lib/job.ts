@@ -153,7 +153,10 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
       }
       if (atrasoDias > 1) cierre += `\n\n<i>Los últimos ${atrasoDias} días todavía no los publica la distribuidora; es lo normal.</i>`;
     }
-    const ok = await avisarContrato(c.id, `📊 <b>${etiquetaDe(c)} · NIC ${nic}</b>\n${resumen}\nVas por el ${pct}% del límite de ${THRESHOLD} kWh.${cierre}`);
+    // El mensaje llega solo todos los días: siempre dice cómo apagarlo, para
+    // que nadie sienta que el bot le escribe sin permiso.
+    const pie = '\n\n<i>Este resumen llega solo cada día. Se apaga o se cambia la hora en la página, en «Mi cuenta».</i>';
+    const ok = await avisarContrato(c.id, `📊 <b>${etiquetaDe(c)} · NIC ${nic}</b>\n${resumen}\nVas por el ${pct}% del límite de ${THRESHOLD} kWh.${cierre}${pie}`);
     log.push(`resumen diario ${ok ? 'enviado' : 'NO enviado'}`);
     try {
       const { weeklyChart } = await import('./status');
@@ -375,24 +378,30 @@ export async function runContrato(cid: number, silencioso = true): Promise<RunRe
 }
 
 
-/** Corrida completa: recorre cada contrato y actualiza sus datos. */
-export async function runDaily(): Promise<RunResult> {
+/**
+ * Corrida completa. El cron pasa la hora de República Dominicana y cada
+ * contrato se procesa solo a la hora que su dueño eligió (resumen_hora), con
+ * o sin resumen diario según lo tenga puesto. Sin hora (disparo manual), se
+ * procesan todos.
+ */
+export async function runDaily(hora: number | null = null): Promise<RunResult> {
   const log: string[] = [];
   await ensureSchema();
   const db = sql();
-  const [run] = await db<{ id: number }[]>`INSERT INTO runs DEFAULT VALUES RETURNING id`;
-  let fallos = 0;
 
-  const contratos = await contratosActivos();
+  const todos = await contratosActivos();
+  const contratos = hora == null ? todos : todos.filter((c) => (c.resumen_hora ?? 18) === hora);
   if (!contratos.length) {
+    // A esta hora no le toca a nadie: no es un error ni deja corrida anotada.
+    if (hora != null && todos.length) return { ok: true, log: [`ningún contrato programado a las ${hora}:00`] };
     const msg = 'No hay ningún contrato con credenciales. Configúralo en el panel.';
-    log.push('ERROR: ' + msg);
-    await db`UPDATE runs SET finished_at = now(), ok = false, summary = ${log.join('\n')}, error = ${msg} WHERE id = ${run.id}`;
-    return { ok: false, log, error: msg };
+    return { ok: false, log: ['ERROR: ' + msg], error: msg };
   }
 
+  const [run] = await db<{ id: number }[]>`INSERT INTO runs DEFAULT VALUES RETURNING id`;
+  let fallos = 0;
   for (const c of contratos) {
-    if (!(await procesarContrato(c, log))) fallos++;
+    if (!(await procesarContrato(c, log, !c.resumen_diario))) fallos++;
   }
 
   await purgeOldPdfs(log);

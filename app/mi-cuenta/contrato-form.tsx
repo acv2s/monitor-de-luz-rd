@@ -7,6 +7,7 @@ interface Contrato {
   id: number; nombre: string | null; utility: string; email: string | null;
   password: string | null; nic: string | null; goal_mode: string;
   budget_rd: number | null; kwh_threshold: number;
+  resumen_diario: boolean; resumen_hora: number;
 }
 
 interface Props {
@@ -117,6 +118,30 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado, ar
             <input type="number" name="kwh_threshold" defaultValue={contrato.kwh_threshold ?? 700} />
           </label>
         )}
+        <div className="cfg-actions"><button type="submit">Guardar</button></div>
+      </section>
+
+      <section className="card cfg-card wide">
+        <h2><span className="g-ico">📬</span> Mensajes automáticos</h2>
+        <p className="desc">
+          Un resumen diario por Telegram con tu consumo y los días que se dispararon.
+          Tú decides si lo quieres y a qué hora; los avisos importantes (cuando vas a pasarte
+          del límite o llega una factura) van siempre.
+        </p>
+        <label className="cfg-row switch">
+          <span className="cfg-l">Mandarme el resumen cada día</span>
+          <input type="hidden" name="resumen_diario" value="false" />
+          <input type="checkbox" name="resumen_diario" value="true" defaultChecked={contrato.resumen_diario ?? true} />
+        </label>
+        <label className="cfg-row">
+          <span className="cfg-l">A qué hora<small>Hora de República Dominicana.</small></span>
+          <select name="resumen_hora" defaultValue={String(contrato.resumen_hora ?? 18)}>
+            {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
+              <option key={h} value={h}>{h > 12 ? `${h - 12}:00 p. m.` : h === 12 ? '12:00 p. m.' : `${h}:00 a. m.`}</option>
+            ))}
+          </select>
+        </label>
+        <div className="cfg-actions"><button type="submit">Guardar</button></div>
       </section>
 
       <section className="card cfg-card wide">

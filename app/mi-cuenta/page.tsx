@@ -87,6 +87,17 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
         />
       )}
 
+      {contrato && (
+        <section className="card">
+          <h2><span className="g-ico">📦</span> Tus datos son tuyos</h2>
+          <p className="desc">
+            Descarga todo lo guardado de tu cuenta (consumo diario, mensual y facturas)
+            en un archivo, cuando quieras.
+          </p>
+          <a className="wz-next" href="/api/exportar">Descargar mis datos</a>
+        </section>
+      )}
+
       {codigo && (
         <section className="card">
           <h2><span className="g-ico">💬</span> El bot de Telegram</h2>

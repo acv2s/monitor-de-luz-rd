@@ -95,11 +95,9 @@ export async function POST(req: NextRequest) {
   // Nota de voz: se transcribe y se trata igual que un mensaje escrito.
   let entrada = escrito;
   let porVoz = false;
+  // Las notas de voz son para todo el mundo: no dependen de permisos por
+  // persona, solo de que la transcripción esté configurada.
   if (audio) {
-    if (!yo.puedeVoz) {
-      await sendTelegramTo(chatId, '🎙️ Las notas de voz no están habilitadas para tu cuenta. Escríbeme y te respondo igual.');
-      return NextResponse.json({ ok: true });
-    }
     if (!(await transcriptionAvailable())) {
       await sendTelegramTo(chatId, '🎙️ Recibí tu nota de voz, pero las notas de voz no están activadas todavía en la configuración. Escríbeme mientras tanto.');
       return NextResponse.json({ ok: true });
