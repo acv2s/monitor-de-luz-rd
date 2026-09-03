@@ -32,7 +32,11 @@ async function loadData() {
     SELECT nic, captured_at, to_char(fecha_ultima_factura,'YYYY-MM-DD') AS cycle_start, to_char(datos_hasta,'YYYY-MM-DD') AS datos_hasta,
            to_char(fecha_lectura,'YYYY-MM-DD') AS fecha_lectura, lectura_activa_kwh::float AS lectura, consumo_hasta_fecha_kwh AS consumo,
            proyeccion_kwh AS proyeccion, to_char(dia_mayor_consumo,'YYYY-MM-DD') AS dia_mayor, valor_mayor_kwh AS valor_mayor, titular, tarifa, medidor
-    FROM teleconsumo_snapshots WHERE (${cid}::bigint IS NULL OR contract_id = ${cid}) ORDER BY captured_at DESC LIMIT 1`;
+    FROM teleconsumo_snapshots
+    WHERE (${cid}::bigint IS NULL OR contract_id = ${cid})
+      -- una lectura a medias del portal no puede mandar sobre las buenas
+      AND fecha_ultima_factura IS NOT NULL AND datos_hasta IS NOT NULL
+    ORDER BY captured_at DESC LIMIT 1`;
   const nic = snap?.nic;
   const daily = nic && snap.cycle_start
     ? await db<{ day: string; kwh: number }[]>`
@@ -109,15 +113,21 @@ export default async function Page() {
   if (c && !c.email && !c.password) redirect(c.owner_id === null ? '/bienvenida' : '/empezar');
 
   const { THRESHOLD, meta, contrato, snap, daily, allDaily, monthly, invoices, alerts, lastRun, pricing, ultimaFactura } = data!;
-  const consumo = snap?.consumo ?? 0;
-  const proy = snap?.proyeccion ?? 0;
+  // Si el portal reportó 0 pero los días guardados del ciclo suman más, se
+  // cree en lo guardado: una lectura floja del portal no borra lo que ya se vio.
+  const sumaDias = Math.round(daily.reduce((a, b) => a + b.kwh, 0));
+  const consumo = Math.max(snap?.consumo ?? 0, sumaDias);
+  const proyPortal = snap?.proyeccion ?? 0;
   const pct = Math.min(100, Math.round((consumo / THRESHOLD) * 100));
-  const level = consumo >= THRESHOLD ? 'crit' : proy >= THRESHOLD ? 'warn' : 'good';
   const dias = daily.filter((d) => d.kwh > 0);
   // Para explicar por qué no hay pesos: ¿hay facturas?, ¿se pudieron leer?
   const facturasOk = invoices.filter((i: any) => i.parsed_ok).length;
   const primerError = invoices.find((i: any) => !i.parsed_ok && i.parse_error)?.parse_error ?? null;
   const avg = dias.length ? dias.reduce((a, b) => a + b.kwh, 0) / dias.length : 0;
+  // Sin proyección del portal pero con días guardados: se proyecta con el
+  // promedio real, en vez de enseñar un 0 que no es verdad.
+  const proy = proyPortal > 0 ? proyPortal : dias.length ? Math.round(avg * 31) : 0;
+  const level = consumo >= THRESHOLD ? 'crit' : proy >= THRESHOLD ? 'warn' : 'good';
   const diasTranscurridos = snap?.cycle_start && snap?.datos_hasta ? Math.round((Date.parse(snap.datos_hasta) - Date.parse(snap.cycle_start)) / 86400000) : 0;
   // Los últimos días del ciclo que cerró, para no dejar el panel vacío
   // mientras la distribuidora publica los primeros días del ciclo nuevo.

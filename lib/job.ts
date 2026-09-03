@@ -338,8 +338,27 @@ async function procesarContrato(c: Contrato, log: string[], silencioso = false):
       const { data } = await client.getTeleconsumo(nic);
       // Anota lo que veía el portal, para aprender su hora de publicación.
       await anotarSonda(c.id, data.datosHasta ?? null);
-      await saveTeleconsumo(c.id, nic, data, propio);
-      await evaluateAlerts(c, nic, data, propio, silencioso);
+
+      // El portal a veces devuelve la página a medias (sin fechas, o con el
+      // consumo en cero dentro del MISMO ciclo que ayer tenía datos). Guardar
+      // esa lectura ponía el panel "en cero" como si se hubiera borrado todo.
+      // Una lectura así se descarta: los datos guardados quedan intactos y se
+      // vuelve a intentar en la próxima corrida. Un ciclo NUEVO de verdad
+      // (fecha de última factura distinta) sí se guarda siempre.
+      const [previa] = await db<{ ciclo: string | null; consumo: number | null }[]>`
+        SELECT to_char(fecha_ultima_factura,'YYYY-MM-DD') AS ciclo, consumo_hasta_fecha_kwh AS consumo
+        FROM teleconsumo_snapshots
+        WHERE nic = ${nic} AND fecha_ultima_factura IS NOT NULL
+        ORDER BY captured_at DESC LIMIT 1`;
+      const incompleta = previa && (!data.fechaUltimaFactura || !data.datosHasta);
+      const seVacio = previa && data.fechaUltimaFactura === previa.ciclo
+        && (previa.consumo ?? 0) > 0 && (data.consumoHastaFechaKwh ?? 0) === 0 && !data.daily.length;
+      if (incompleta || seVacio) {
+        apunta(`[${etiqueta}] el portal devolvió una lectura ${incompleta ? 'incompleta' : 'vacía del mismo ciclo'}: se descarta, los datos guardados no se tocan`);
+      } else {
+        await saveTeleconsumo(c.id, nic, data, propio);
+        await evaluateAlerts(c, nic, data, propio, silencioso);
+      }
       const dailyRows = await db<{ day: string; kwh: number }[]>`
         SELECT to_char(day,'YYYY-MM-DD') AS day, kwh::float AS kwh
         FROM daily_consumption WHERE nic = ${nic} ORDER BY day`;

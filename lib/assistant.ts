@@ -25,6 +25,7 @@ async function buildContext(cid: number | null): Promise<string> {
            consumo_hasta_fecha_kwh AS consumo, proyeccion_kwh AS proyeccion, titular, tarifa
     FROM teleconsumo_snapshots
     WHERE (${cid}::bigint IS NULL OR contract_id = ${cid})
+      AND fecha_ultima_factura IS NOT NULL AND datos_hasta IS NOT NULL
     ORDER BY captured_at DESC LIMIT 1`;
   if (!snap) return 'Sin datos todavía: el monitor no ha corrido.';
   const daily = await db<any[]>`

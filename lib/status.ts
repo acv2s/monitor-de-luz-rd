@@ -35,6 +35,7 @@ async function loadCiclo(cid: number | null) {
            to_char(dia_mayor_consumo,'YYYY-MM-DD') AS dia_mayor, valor_mayor_kwh AS valor_mayor
     FROM teleconsumo_snapshots
     WHERE (${cid}::bigint IS NULL OR contract_id = ${cid})
+      AND fecha_ultima_factura IS NOT NULL AND datos_hasta IS NOT NULL
     ORDER BY captured_at DESC LIMIT 1`;
   if (!snap) return null;
   const daily = snap.cycle_start
