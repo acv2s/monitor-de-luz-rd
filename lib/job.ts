@@ -129,6 +129,12 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
     // dice cuál es y se comenta CÓMO fue, en vez de soltar el número pelado.
     const atrasoDias = diasDeAtraso(t.datosHasta ?? null);
     let cierre = '';
+    if (!dias.length) {
+      // Ciclo recién cerrado: el contador vuelve a cero y con el atraso de
+      // publicación no hay días que enseñar. Decirlo evita el susto de
+      // "¿me borraron los datos?".
+      cierre = '\n🔄 <i>Tu ciclo acaba de cerrar: el contador arranca de nuevo con la factura y la distribuidora todavía no publica los primeros días. El ciclo pasado quedó guardado completo.</i>';
+    }
     if (last) {
       const otros = dias.slice(0, -1);
       const base = otros.length ? otros.reduce((a, b) => a + b.kwh, 0) / otros.length : 0;

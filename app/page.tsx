@@ -39,6 +39,14 @@ async function loadData() {
         SELECT to_char(day,'YYYY-MM-DD') AS day, kwh::float AS kwh FROM daily_consumption
         WHERE nic = ${nic} AND day >= ${snap.cycle_start} ORDER BY day`
     : [];
+  // La última factura leída: sirve para explicar el arranque de un ciclo
+  // nuevo (el "en cero" que asusta) enseñando que el ciclo pasado quedó guardado.
+  const [ultimaFactura] = nic
+    ? await db<any[]>`
+        SELECT to_char(periodo_inicio,'YYYY-MM-DD') AS inicio, to_char(periodo_fin,'YYYY-MM-DD') AS fin,
+               consumo_kwh, facturado_rd::float AS rd
+        FROM invoices WHERE nic = ${nic} AND parsed_ok ORDER BY fecha_emision DESC LIMIT 1`
+    : [];
   const monthly = nic
     ? await db<any[]>`
         SELECT to_char(m.month,'YYYY-MM-DD') AS month, m.kwh, m.source, i.facturado_rd::float AS rd
@@ -76,7 +84,7 @@ async function loadData() {
       }
     : metaGlobal;
   const THRESHOLD = meta.kwh;
-  return { THRESHOLD, meta, contrato, snap, daily, allDaily, monthly: monthly.reverse(), invoices, alerts, lastRun, pricing };
+  return { THRESHOLD, meta, contrato, snap, daily, allDaily, monthly: monthly.reverse(), invoices, alerts, lastRun, pricing, ultimaFactura };
 }
 
 function stripHtml(s: string) { return s.replace(/<[^>]+>/g, ''); }
@@ -100,7 +108,7 @@ export default async function Page() {
   const c = data!.contrato;
   if (c && !c.email && !c.password) redirect(c.owner_id === null ? '/bienvenida' : '/empezar');
 
-  const { THRESHOLD, meta, contrato, snap, daily, allDaily, monthly, invoices, alerts, lastRun, pricing } = data!;
+  const { THRESHOLD, meta, contrato, snap, daily, allDaily, monthly, invoices, alerts, lastRun, pricing, ultimaFactura } = data!;
   const consumo = snap?.consumo ?? 0;
   const proy = snap?.proyeccion ?? 0;
   const pct = Math.min(100, Math.round((consumo / THRESHOLD) * 100));
@@ -187,6 +195,22 @@ export default async function Page() {
         </section>
       ) : (
         <>
+          {/* Ciclo recién arrancado: el portal reinicia el contador con cada
+              factura y publica con ~2 días de atraso, así que los primeros
+              días el panel se ve "en cero". No se borró nada — hay que decirlo. */}
+          {daily.length <= 1 && (
+            <section className="card">
+              <div className="meta-now">
+                🔄 <b>Tu ciclo acaba de cerrar{snap.cycle_start ? ` el ${fmtDate(snap.cycle_start)}` : ''}.</b>{' '}
+                El contador arranca de nuevo con cada factura, y la distribuidora publica los días
+                con ~2 días de atraso: por eso todavía se ve poco o nada. No se borró ningún dato
+                {ultimaFactura?.consumo_kwh
+                  ? <> — el ciclo pasado ({fmtDate(ultimaFactura.inicio)} → {fmtDate(ultimaFactura.fin)}) cerró con <b>{ultimaFactura.consumo_kwh} kWh</b>{ultimaFactura.rd ? <> por <b>{fmtRD(ultimaFactura.rd)}</b></> : null} y quedó guardado en tus facturas y en el historial por mes</>
+                  : ' — todo el historial sigue guardado abajo, en los meses y las facturas'}.
+              </div>
+            </section>
+          )}
+
           {consejo && (
             <section className={`coach ${consejo.nivel}`}>
               <div className="coach-head">
