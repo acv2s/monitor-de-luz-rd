@@ -34,6 +34,21 @@ export function buildConsejo(i: CoachInput): Consejo {
   const { consumo, proy, avg, permitido, restantes, dias, pricing, threshold: THRESHOLD, metaRd } = i;
   const acciones: string[] = [];
 
+  // Ciclo recién cerrado: sin días publicados no hay ritmo ni proyección que
+  // valgan. Decir "todo bajo control, van 0 kWh" aquí suena a que se
+  // borraron los datos — lo que toca es explicar qué está pasando.
+  if (!dias.length) {
+    return {
+      nivel: 'ok',
+      titulo: 'Ciclo nuevo: arrancando de cero',
+      mensaje: 'Llegó tu factura y el contador vuelve a empezar. La distribuidora publica los días con ~2 días de atraso, así que todavía no hay nada que sumar — es lo normal, no se perdió ningún dato.',
+      acciones: [
+        'El ciclo pasado quedó guardado completo: míralo más abajo, en el historial por mes y en tus facturas.',
+        'En un par de días aparecen los primeros días del ciclo nuevo y las proyecciones vuelven solas.',
+      ],
+    };
+  }
+
   // ¿Qué días se disparan? Ahí está el dinero.
   const altos = dias.filter((d) => avg > 0 && d.kwh >= avg * 1.35);
   const porDia = new Map<number, number>();

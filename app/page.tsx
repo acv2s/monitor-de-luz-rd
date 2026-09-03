@@ -119,6 +119,12 @@ export default async function Page() {
   const primerError = invoices.find((i: any) => !i.parsed_ok && i.parse_error)?.parse_error ?? null;
   const avg = dias.length ? dias.reduce((a, b) => a + b.kwh, 0) / dias.length : 0;
   const diasTranscurridos = snap?.cycle_start && snap?.datos_hasta ? Math.round((Date.parse(snap.datos_hasta) - Date.parse(snap.cycle_start)) / 86400000) : 0;
+  // Los últimos días del ciclo que cerró, para no dejar el panel vacío
+  // mientras la distribuidora publica los primeros días del ciclo nuevo.
+  const cicloPasado = daily.length || !snap?.cycle_start
+    ? []
+    : allDaily.filter((d) => d.day < snap.cycle_start).slice(-31);
+  const avgPasado = cicloPasado.length ? cicloPasado.reduce((a, b) => a + b.kwh, 0) / cicloPasado.length : 0;
   const restantes = Math.max(0, 31 - diasTranscurridos);
   const permitido = restantes > 0 ? Math.max(0, (THRESHOLD - consumo) / restantes) : 0;
 
@@ -239,8 +245,14 @@ export default async function Page() {
                 </div>
                 <div className="big-money">{fmtRD(estimateCost(consumo, pricing))}</div>
                 <div className="money-proj">
-                  Al cierre: <b>{fmtRD(estimateCost(proy, pricing))}</b>
-                  {meta.rd ? <span className="money-goal"> · meta {fmtRD(meta.rd)}</span> : null}
+                  {dias.length ? (
+                    <>
+                      Al cierre: <b>{fmtRD(estimateCost(proy, pricing))}</b>
+                      {meta.rd ? <span className="money-goal"> · meta {fmtRD(meta.rd)}</span> : null}
+                    </>
+                  ) : (
+                    <>Solo el cargo fijo: el ciclo acaba de arrancar y aún no hay días publicados.</>
+                  )}
                 </div>
                 {/* De dónde sale el número grande: las mismas líneas de la factura,
                     en pequeño, para que se vea que va sumando de verdad. */}
@@ -303,17 +315,30 @@ export default async function Page() {
             <BudgetChart data={budget} threshold={THRESHOLD} />
           </section>
 
-          <section className="card">
-            <h2><Chip icon="bolt" tone="blue" /> Consumo diario del ciclo actual</h2>
-            <p className="desc">Amarillo: día alto. Rojo: día pico.</p>
-            <DailyChart data={daily} avg={avg} permitido={permitido} />
-            {altos.length > 0 && (
-              <>
-                <h3>Días que dispararon el consumo</h3>
-                <DayCards dias={altos} avg={avg} precioKwh={pricing?.precioKwh ?? null} />
-              </>
-            )}
-          </section>
+          {daily.length > 0 ? (
+            <section className="card">
+              <h2><Chip icon="bolt" tone="blue" /> Consumo diario del ciclo actual</h2>
+              <p className="desc">Amarillo: día alto. Rojo: día pico.</p>
+              <DailyChart data={daily} avg={avg} permitido={permitido} />
+              {altos.length > 0 && (
+                <>
+                  <h3>Días que dispararon el consumo</h3>
+                  <DayCards dias={altos} avg={avg} precioKwh={pricing?.precioKwh ?? null} />
+                </>
+              )}
+            </section>
+          ) : cicloPasado.length > 0 && (
+            /* El ciclo nuevo todavía no tiene días publicados: en vez de una
+               gráfica vacía, se enseñan los días guardados del ciclo pasado. */
+            <section className="card">
+              <h2><Chip icon="bolt" tone="blue" /> Consumo diario · ciclo pasado</h2>
+              <p className="desc">
+                Los últimos días guardados, del ciclo que cerró{snap?.cycle_start ? ` el ${fmtDate(snap.cycle_start)}` : ''}.
+                Cuando la distribuidora publique los días nuevos, esta gráfica pasa al ciclo actual.
+              </p>
+              <DailyChart data={cicloPasado} avg={avgPasado} permitido={0} />
+            </section>
+          )}
         </>
       )}
 
