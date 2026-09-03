@@ -396,7 +396,22 @@ export async function runDaily(hora: number | null = null): Promise<RunResult> {
   const db = sql();
 
   const todos = await contratosActivos();
-  const contratos = hora == null ? todos : todos.filter((c) => (c.resumen_hora ?? 18) === hora);
+  // Red de seguridad: si a un contrato no le ha corrido una sincronización
+  // buena en las últimas 20 horas (el cron se saltó su hora, el plan del
+  // hosting dispara menos veces, lo que sea), se procesa AHORA aunque no sea
+  // su hora. Nadie debe quedarse un día sin su factura ni sus datos.
+  const atrasados = new Set(
+    (await db<{ id: number }[]>`
+      SELECT c.id FROM contracts c
+      WHERE c.email IS NOT NULL AND c.password IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM runs r
+          WHERE r.contract_id = c.id AND r.ok AND r.started_at > now() - interval '20 hours')`
+    ).map((r) => r.id),
+  );
+  const contratos = hora == null
+    ? todos
+    : todos.filter((c) => (c.resumen_hora ?? 18) === hora || atrasados.has(c.id));
   if (!contratos.length) {
     // A esta hora no le toca a nadie: no es un error ni deja corrida anotada.
     if (hora != null && todos.length) return { ok: true, log: [`ningún contrato programado a las ${hora}:00`] };
@@ -407,7 +422,10 @@ export async function runDaily(hora: number | null = null): Promise<RunResult> {
   const [run] = await db<{ id: number }[]>`INSERT INTO runs DEFAULT VALUES RETURNING id`;
   let fallos = 0;
   for (const c of contratos) {
-    if (!(await procesarContrato(c, log, !c.resumen_diario))) fallos++;
+    // El resumen diario solo sale a la hora elegida; una corrida de rescate
+    // fuera de hora sincroniza y alerta, pero no manda el resumen.
+    const silencioso = !c.resumen_diario || (hora != null && (c.resumen_hora ?? 18) !== hora);
+    if (!(await procesarContrato(c, log, silencioso))) fallos++;
   }
 
   await purgeOldPdfs(log);
