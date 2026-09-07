@@ -441,9 +441,11 @@ export async function runDaily(hora: number | null = null): Promise<RunResult> {
   const [run] = await db<{ id: number }[]>`INSERT INTO runs DEFAULT VALUES RETURNING id`;
   let fallos = 0;
   for (const c of contratos) {
-    // El resumen diario solo sale a la hora elegida; una corrida de rescate
-    // fuera de hora sincroniza y alerta, pero no manda el resumen.
-    const silencioso = !c.resumen_diario || (hora != null && (c.resumen_hora ?? 18) !== hora);
+    // El resumen diario sale a la hora elegida — y también en la corrida de
+    // rescate (si el hosting solo dispara el cron una vez al día, esa corrida
+    // ES el día de la persona; callarla la dejaría sin resumen para siempre).
+    const esSuHora = hora == null || (c.resumen_hora ?? 18) === hora;
+    const silencioso = !c.resumen_diario || (!esSuHora && !atrasados.has(c.id));
     if (!(await procesarContrato(c, log, silencioso))) fallos++;
   }
 
