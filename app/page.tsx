@@ -183,6 +183,35 @@ export default async function Page() {
     rd: m.rd,
     dias: diasPorMes.get(m.month.slice(0, 7)) ?? [],
   }));
+  // Meses con días guardados pero todavía sin factura (el mes en curso, o uno
+  // cuya factura no ha salido): también se pueden revisar día por día.
+  const mesesConFactura = new Set(historial.map((h) => h.month.slice(0, 7)));
+  for (const [mes, diasMes] of diasPorMes) {
+    if (mesesConFactura.has(mes)) continue;
+    historial.unshift({
+      month: `${mes}-01`,
+      kwh: Math.round(diasMes.reduce((a, b) => a + b.kwh, 0)),
+      source: 'dias',
+      rd: null,
+      dias: diasMes,
+    });
+  }
+  historial.sort((a, b) => b.month.localeCompare(a.month));
+
+  // Cierre estimado del ciclo: lo que duran tus ciclos según tus facturas.
+  // La distribuidora corta y tarda días en emitir la factura; sin esto, el
+  // monitor seguía "corriendo" como si el ciclo no hubiera cortado.
+  const duraciones = invoices
+    .filter((i: any) => i.parsed_ok && i.dias_facturados > 0)
+    .map((i: any) => Number(i.dias_facturados))
+    .slice(0, 6)
+    .sort((a: number, b: number) => a - b);
+  const duracionCiclo = duraciones.length ? duraciones[Math.floor(duraciones.length / 2)] : 30;
+  const cierreEstimado = snap?.cycle_start
+    ? new Date(Date.parse(snap.cycle_start + 'T00:00:00Z') + duracionCiclo * 86400000).toISOString().slice(0, 10)
+    : null;
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const cicloVencido = !!cierreEstimado && hoyISO >= cierreEstimado && daily.length > 1;
 
   const consejo = snap ? buildConsejo({ threshold: THRESHOLD, metaRd: meta.rd, consumo, proy, avg, permitido, restantes, dias, pricing }) : null;
 
@@ -223,6 +252,18 @@ export default async function Page() {
                 {ultimaFactura?.consumo_kwh
                   ? <> — el ciclo pasado ({fmtDate(ultimaFactura.inicio)} → {fmtDate(ultimaFactura.fin)}) cerró con <b>{ultimaFactura.consumo_kwh} kWh</b>{ultimaFactura.rd ? <> por <b>{fmtRD(ultimaFactura.rd)}</b></> : null} y quedó guardado en tus facturas y en el historial por mes</>
                   : ' — todo el historial sigue guardado abajo, en los meses y las facturas'}.
+              </div>
+            </section>
+          )}
+
+          {cicloVencido && (
+            <section className="card">
+              <div className="meta-now">
+                ⏳ <b>Tu ciclo debió cortar alrededor del {fmtDate(cierreEstimado)}</b> (tus últimos
+                ciclos duraron ~{duracionCiclo} días). La distribuidora todavía no publica la factura
+                nueva — suele tardar unos días en emitirla. En cuanto salga, el monitor la baja solo,
+                te llega la alerta con el análisis y el contador arranca el ciclo nuevo. Los días de
+                más que se sigan registrando quedan guardados igual.
               </div>
             </section>
           )}
@@ -457,7 +498,7 @@ export default async function Page() {
             {snap.tarifa && <div><dt>Tarifa</dt><dd>{snap.tarifa}</dd></div>}
             {snap.medidor && <div><dt>Medidor</dt><dd>{snap.medidor}</dd></div>}
             <div><dt>Lectura activa</dt><dd>{snap.lectura?.toLocaleString('es-DO')} kWh · {fmtDate(snap.fecha_lectura)}</dd></div>
-            <div><dt>Ciclo actual</dt><dd>{fmtDate(snap.cycle_start)} → {fmtDate(snap.datos_hasta)}</dd></div>
+            <div><dt>Ciclo actual</dt><dd>{fmtDate(snap.cycle_start)} → {fmtDate(snap.datos_hasta)}{cierreEstimado ? ` · corta ~${fmtDate(cierreEstimado)}` : ''}</dd></div>
           </dl>
         </details>
       )}

@@ -158,6 +158,8 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
         }
       }
       if (atrasoDias > 1) cierre += `\n\n<i>Los últimos ${atrasoDias} días todavía no los publica la distribuidora; es lo normal.</i>`;
+      // El ciclo ya cumplió sus ~30 días: el corte pasó y la factura viene en camino.
+      if (restantes === 0) cierre += '\n\n⏳ <i>Tu ciclo ya debió cortar: cuando la distribuidora emita la factura, te la mando con su análisis y el contador arranca de nuevo.</i>';
     }
     // El mensaje llega solo todos los días: siempre dice cómo apagarlo, para
     // que nadie sienta que el bot le escribe sin permiso.
