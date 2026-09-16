@@ -1,8 +1,7 @@
 import { settingsView } from '@/lib/settings';
 import { getMeta } from '@/lib/goal';
 import { fmtRD } from '@/lib/analysis';
-import { DISTRIBUIDORAS } from '@/lib/utilities';
-import { MetaForm, CuentaForm, AsistenteBody, Seccion, Clave, Deslizador, type Campos } from './settings-client';
+import { AsistenteBody, Seccion, Clave, Deslizador, type Campos } from './settings-client';
 
 /** Panel de configuración completo. Todo se llena aquí, sin tocar el hosting. */
 export async function SettingsForm() {
@@ -13,29 +12,17 @@ export async function SettingsForm() {
 
   return (
     <div className="cfg-grid">
+      {/* La meta y la cuenta de luz viven en UN solo lugar: Mi cuenta.
+          Tenerlas también aquí era un duplicado que confundía. */}
       <section className="card cfg-card wide">
-        <h2><span className="g-ico">🎯</span> Tu meta</h2>
-        <p className="desc">El corazón del sistema: define qué quieres lograr y de ahí salen los avisos, la proyección y los consejos.</p>
-        <MetaForm
-          campos={campos}
-          resumen={
-            <div className={`meta-now ${meta.sinPrecio ? 'warn' : ''}`}>
-              {meta.sinPrecio ? (
-                <>Todavía no hay facturas leídas para convertir pesos a kWh. Mientras tanto se usa el límite de <b>{meta.kwh} kWh</b>.</>
-              ) : meta.modo === 'dinero' ? (
-                <>Meta actual: pagar menos de <b>{fmtRD(meta.rd ?? 0)}</b> al mes ≈ <b>{meta.kwh} kWh</b>, con tu kWh a {fmtRD(meta.precioKwh ?? 0)}.</>
-              ) : (
-                <>Meta actual: no pasar de <b>{meta.kwh} kWh</b>{meta.rd ? <> ≈ <b>{fmtRD(meta.rd)}</b> al mes</> : null}.</>
-              )}
-            </div>
-          }
-        />
-      </section>
-
-      <section className="card cfg-card">
-        <h2><span className="g-ico">⚡</span> Tu cuenta de luz</h2>
-        <p className="desc">Con esto se entra a tu oficina virtual a leer el consumo y las facturas.</p>
-        <CuentaForm campos={campos} distribuidoras={DISTRIBUIDORAS} />
+        <h2><span className="g-ico">⚡</span> Tu meta y tu cuenta de luz</h2>
+        <p className="desc">
+          {meta.modo === 'dinero' && meta.rd
+            ? <>Meta actual: pagar menos de <b>{fmtRD(meta.rd)}</b> al mes ≈ <b>{meta.kwh} kWh</b>. </>
+            : <>Meta actual: no pasar de <b>{meta.kwh} kWh</b>. </>}
+          Se editan en un solo lugar, junto con tus credenciales y tus mensajes automáticos.
+        </p>
+        <a className="wz-next" href="/mi-cuenta">Ir a Mi cuenta</a>
       </section>
 
       <section className="card cfg-card">

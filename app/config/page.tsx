@@ -2,7 +2,6 @@ import { ensureSchema } from '@/lib/db';
 import { SettingsForm } from './settings-form';
 import { TelegramCard } from './telegram-card';
 import { PersonasCard } from './personas-card';
-import { PublicacionCard } from './publicacion-card';
 import { urlDeLaApp } from '@/lib/appurl';
 
 export const dynamic = 'force-dynamic';
@@ -86,7 +85,6 @@ export default async function ConfigPage({ searchParams }: { searchParams: Promi
 
       <TelegramCard appUrl={appUrl} />
 
-      <PublicacionCard appUrl={appUrl} />
       <PersonasCard appUrl={appUrl} error={q.e} nuevo={q.nuevo} />
 
     </main>
