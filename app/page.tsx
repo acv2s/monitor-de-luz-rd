@@ -183,20 +183,19 @@ export default async function Page() {
     rd: m.rd,
     dias: diasPorMes.get(m.month.slice(0, 7)) ?? [],
   }));
-  // Meses con días guardados pero todavía sin factura (el mes en curso, o uno
-  // cuya factura no ha salido): también se pueden revisar día por día.
-  const mesesConFactura = new Set(historial.map((h) => h.month.slice(0, 7)));
-  for (const [mes, diasMes] of diasPorMes) {
-    if (mesesConFactura.has(mes)) continue;
+  // El ciclo en curso (los días desde la última factura) también se puede
+  // revisar día por día, arriba del todo. Va por FECHAS DE FACTURA, no por
+  // mes calendario: la unidad de esta app es el ciclo, no "del 1 al 30".
+  if (snap?.cycle_start && daily.length) {
     historial.unshift({
-      month: `${mes}-01`,
-      kwh: Math.round(diasMes.reduce((a, b) => a + b.kwh, 0)),
-      source: 'dias',
+      month: snap.cycle_start,
+      titulo: `Ciclo en curso · ${fmtDate(snap.cycle_start)} → ${fmtDate(daily[daily.length - 1].day)}`,
+      kwh: Math.round(daily.reduce((a, b) => a + b.kwh, 0)),
+      source: 'ciclo',
       rd: null,
-      dias: diasMes,
-    });
+      dias: daily,
+    } as any);
   }
-  historial.sort((a, b) => b.month.localeCompare(a.month));
 
   // Cierre estimado del ciclo: lo que duran tus ciclos según tus facturas.
   // La distribuidora corta y tarda días en emitir la factura; sin esto, el

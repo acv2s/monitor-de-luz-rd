@@ -5,6 +5,8 @@ import { DailyChart } from './Charts';
 
 export interface MesHistorial {
   month: string;            // YYYY-MM-01
+  /** Etiqueta propia (ej. el ciclo en curso con sus fechas de factura). */
+  titulo?: string;
   kwh: number;              // facturado o del histórico de la factura
   source: string;
   rd: number | null;
@@ -40,7 +42,7 @@ export function MonthHistory({ meses, threshold, precioKwh }: { meses: MesHistor
           <div className={`mh-item ${open ? 'open' : ''}`} key={m.month}>
             <button className="mh-head" onClick={() => setAbierto(open ? null : m.month)} aria-expanded={open}>
               <span className="mh-name">
-                {etiqueta(m.month)}
+                {m.titulo ?? etiqueta(m.month)}
                 {dias.length > 0 && <em>{dias.length} días registrados</em>}
               </span>
               <span className="mh-bar"><i className={over ? 'over' : ''} style={{ width: `${pct}%` }} /></span>

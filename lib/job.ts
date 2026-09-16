@@ -430,9 +430,28 @@ export async function runDaily(hora: number | null = null): Promise<RunResult> {
           WHERE r.contract_id = c.id AND r.ok AND r.started_at > now() - interval '20 hours')`
     ).map((r) => r.id),
   );
+  // Ventana de corte: cuando un contrato está a un día (o ya pasado) del
+  // cierre estimado de su ciclo, TODA corrida lo revisa aunque no sea su
+  // hora: es justo cuando hay que estar cazando la factura nueva en el
+  // portal, no esperando al día siguiente.
+  const enCorte = new Set(
+    (await db<{ id: number }[]>`
+      SELECT c.id FROM contracts c
+      JOIN LATERAL (
+        SELECT fecha_ultima_factura AS inicio FROM teleconsumo_snapshots
+        WHERE contract_id = c.id AND fecha_ultima_factura IS NOT NULL
+        ORDER BY captured_at DESC LIMIT 1) s ON true
+      LEFT JOIN LATERAL (
+        SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY dias_facturados) AS dur
+        FROM (SELECT dias_facturados FROM invoices
+              WHERE contract_id = c.id AND parsed_ok AND dias_facturados > 0
+              ORDER BY fecha_emision DESC LIMIT 6) ult) d ON true
+      WHERE CURRENT_DATE >= s.inicio + (COALESCE(d.dur, 30) - 1)::int`
+    ).map((r) => r.id),
+  );
   const contratos = hora == null
     ? todos
-    : todos.filter((c) => (c.resumen_hora ?? 18) === hora || atrasados.has(c.id));
+    : todos.filter((c) => (c.resumen_hora ?? 18) === hora || atrasados.has(c.id) || enCorte.has(c.id));
   if (!contratos.length) {
     // A esta hora no le toca a nadie: no es un error ni deja corrida anotada.
     if (hora != null && todos.length) return { ok: true, log: [`ningún contrato programado a las ${hora}:00`] };
