@@ -143,8 +143,10 @@ async function pedirAOpenAI(system: string, pregunta: string, modelo: string, ap
   return texto;
 }
 
-async function pedirAGemini(system: string, pregunta: string, modelo: string, apiKey: string) {
-  const m = modelo || 'gemini-2.0-flash';
+async function pedirAGemini(system: string, pregunta: string, modelo: string, apiKey: string, reintento = false): Promise<string> {
+  // El alias "-latest" apunta siempre al modelo vigente: Google retira los
+  // nombres fijos (gemini-2.0-flash devolvió 404 al salir de servicio).
+  const m = modelo || 'gemini-flash-latest';
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -154,7 +156,18 @@ async function pedirAGemini(system: string, pregunta: string, modelo: string, ap
       generationConfig: { maxOutputTokens: 4000 },
     }),
   });
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) {
+    const cuerpo = await res.text();
+    // Modelo retirado: el propio error de Google nombra el reemplazo.
+    // Se reintenta una vez con ese, en vez de quedarse roto hasta que
+    // alguien entre a la configuración.
+    const sugerido = res.status === 404 ? cuerpo.match(/models\/([\w.-]+)/g)?.pop()?.replace('models/', '') : null;
+    if (!reintento && sugerido && sugerido !== m) {
+      console.warn(`[assistant] Gemini retiró ${m}; reintentando con ${sugerido}`);
+      return pedirAGemini(system, pregunta, sugerido, apiKey, true);
+    }
+    throw new Error(`Gemini ${res.status}: ${cuerpo.slice(0, 200)}`);
+  }
   const j: any = await res.json();
   const texto = (j.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') || '').trim();
   if (!texto) throw new Error(`respuesta vacía (finish: ${j.candidates?.[0]?.finishReason})`);

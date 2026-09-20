@@ -16,8 +16,10 @@ const MODELOS: Record<string, { id: string; nombre: string; nota: string }[]> = 
     { id: 'gpt-4o-mini', nombre: 'GPT-4o mini', nota: 'Más barato' },
   ],
   google: [
-    { id: 'gemini-2.0-flash', nombre: 'Gemini 2.0 Flash', nota: 'Rápido, con capa gratis' },
-    { id: 'gemini-1.5-pro', nombre: 'Gemini 1.5 Pro', nota: 'Más potente' },
+    // Alias "-latest": Google retira los nombres con versión fija (el 2.0
+    // empezó a devolver 404); estos siempre apuntan al modelo vigente.
+    { id: 'gemini-flash-latest', nombre: 'Gemini Flash', nota: 'Rápido, con capa gratis · recomendado' },
+    { id: 'gemini-pro-latest', nombre: 'Gemini Pro', nota: 'Más potente' },
   ],
 };
 
