@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const sesion = await leerCookie(req.cookies.get(COOKIE)?.value, maestra);
   if (!sesion) return NextResponse.json({ ok: false, error: 'Tienes que entrar de nuevo.' }, { status: 401 });
 
-  const c = await contratoDeUsuario(sesion.uid);
+  const c = await contratoDeUsuario(sesion.uid, Number(req.cookies.get('cuenta')?.value) || null);
   if (!c) return NextResponse.json({ ok: false, error: 'Todavía no tienes una cuenta de luz asociada.' }, { status: 400 });
 
   // Quien tiene la cuenta compartida no dispara la lectura: es de su dueño.

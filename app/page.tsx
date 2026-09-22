@@ -11,7 +11,8 @@ import { getMeta } from '@/lib/goal';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { leerCookie, COOKIE } from '@/lib/session';
-import { contratoDeUsuario } from '@/lib/contracts';
+import { contratoDeUsuario, contratosDeUsuario } from '@/lib/contracts';
+import { CuentasSwitch } from '@/components/CuentasSwitch';
 import { getPricing, estimateCost } from '@/lib/pricing';
 import { desgloseDe } from '@/lib/tarifa';
 
@@ -24,7 +25,9 @@ async function loadData() {
   const db = sql();
   // cada quien ve el contrato que le toca (el suyo o el que le compartieron)
   const sesion = await leerCookie((await cookies()).get(COOKIE)?.value, process.env.DASHBOARD_PASSWORD || '');
-  const contrato = sesion ? await contratoDeUsuario(sesion.uid) : null;
+  const cuentas = sesion ? await contratosDeUsuario(sesion.uid) : [];
+  const preferida = Number((await cookies()).get('cuenta')?.value) || null;
+  const contrato = sesion ? await contratoDeUsuario(sesion.uid, preferida) : null;
   // Si hay sesión pero ninguna cuenta asociada, se filtra por una imposible:
   // dejarlo en null apagaría el filtro y mostraría los datos de otra persona.
   const cid = contrato?.id ?? (sesion ? -1 : null);
@@ -88,7 +91,7 @@ async function loadData() {
       }
     : metaGlobal;
   const THRESHOLD = meta.kwh;
-  return { THRESHOLD, meta, contrato, snap, daily, allDaily, monthly: monthly.reverse(), invoices, alerts, lastRun, pricing, ultimaFactura };
+  return { THRESHOLD, meta, contrato, cuentas, snap, daily, allDaily, monthly: monthly.reverse(), invoices, alerts, lastRun, pricing, ultimaFactura };
 }
 
 function stripHtml(s: string) { return s.replace(/<[^>]+>/g, ''); }
@@ -110,9 +113,11 @@ export default async function Page() {
 
   // Cuenta recién creada y todavía sin credenciales: primero los pasos.
   const c = data!.contrato;
-  if (c && !c.email && !c.password) redirect(c.owner_id === null ? '/bienvenida' : '/empezar');
+  // Solo manda al asistente de bienvenida cuando es la ÚNICA cuenta: una
+  // "cuenta nueva" agregada desde el selector se llena en Mi cuenta.
+  if (c && !c.email && !c.password && data!.cuentas.length <= 1) redirect(c.owner_id === null ? '/bienvenida' : '/empezar');
 
-  const { THRESHOLD, meta, contrato, snap, daily, allDaily, monthly, invoices, alerts, lastRun, pricing, ultimaFactura } = data!;
+  const { THRESHOLD, meta, contrato, cuentas, snap, daily, allDaily, monthly, invoices, alerts, lastRun, pricing, ultimaFactura } = data!;
   // Si el portal reportó 0 pero los días guardados del ciclo suman más, se
   // cree en lo guardado: una lectura floja del portal no borra lo que ya se vio.
   const sumaDias = Math.round(daily.reduce((a, b) => a + b.kwh, 0));
@@ -227,6 +232,8 @@ export default async function Page() {
           } : null}
         />
       </header>
+
+      <CuentasSwitch cuentas={cuentas} activa={contrato?.id ?? null} volver="/" />
 
       {!snap ? (
         <section className="card">

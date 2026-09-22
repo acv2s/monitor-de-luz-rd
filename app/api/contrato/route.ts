@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const sesion = await leerCookie(req.cookies.get(COOKIE)?.value, maestra);
   if (!sesion) return NextResponse.redirect(new URL('/entrar', req.url), 303);
 
-  const c = await contratoDeUsuario(sesion.uid);
+  const c = await contratoDeUsuario(sesion.uid, Number(req.cookies.get('cuenta')?.value) || null);
   // Solo el dueño del contrato puede cambiarlo; quien lo tiene compartido, no.
   if (!c || (sesion.uid !== 'maestro' && c.owner_id !== sesion.uid)) {
     return NextResponse.redirect(new URL('/mi-cuenta?e=1', req.url), 303);

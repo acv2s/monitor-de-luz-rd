@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const sesion = await leerCookie(req.cookies.get(COOKIE)?.value, maestra);
   if (!sesion) return NextResponse.json({ ok: false, error: 'Tienes que entrar de nuevo.' }, { status: 401 });
 
-  const c = await contratoDeUsuario(sesion.uid);
+  const c = await contratoDeUsuario(sesion.uid, Number(req.cookies.get('cuenta')?.value) || null);
   if (!c) return NextResponse.json({ ok: false, error: 'Todavía no tienes una cuenta de luz asociada.' }, { status: 400 });
   const propio = sesion.uid === 'maestro' ? c.owner_id === null : c.owner_id === sesion.uid;
   if (!propio) return NextResponse.json({ ok: false, error: 'Esta cuenta es de otra persona.' }, { status: 403 });

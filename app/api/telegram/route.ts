@@ -85,12 +85,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Todas las cuentas de esta persona: quien tiene varias (casa, negocio…)
+  // recibe la respuesta de CADA una, firmada con su nombre y su NIC.
+  const { contratosDeUsuario } = await import('@/lib/contracts');
+  const todasLasCuentas = await contratosDeUsuario(yo.userId ?? 'maestro');
+  const conDatos = todasLasCuentas.filter((c) => c.email && c.password);
+  const misCuentas = (conDatos.length ? conDatos : todasLasCuentas.filter((c) => c.id === cid)).slice(0, 4);
+  const firmaDe = (c: { nombre: string | null; nic: string | null }) =>
+    `\n\n<i>Cuenta: ${c.nombre || 'la tuya'}${c.nic ? ` · NIC ${c.nic}` : ''}</i>`;
+
   // De qué cuenta se está hablando: así nunca hay duda de qué datos son.
   const [cuenta] = await db2()<{ nombre: string | null; nic: string | null }[]>`
     SELECT nombre, nic FROM contracts WHERE id = ${cid}`;
-  const firma = cuenta
-    ? `\n\n<i>Cuenta: ${cuenta.nombre || 'la tuya'}${cuenta.nic ? ` · NIC ${cuenta.nic}` : ''}</i>`
-    : '';
+  const firma = cuenta ? firmaDe(cuenta) : '';
 
   // Nota de voz: se transcribe y se trata igual que un mensaje escrito.
   let entrada = escrito;
@@ -119,27 +126,38 @@ export async function POST(req: NextRequest) {
   let reply: string | null = null;
   try {
     if (/^\/?(consumo|estado|resumen)$|^(como|cómo) voy\??$/.test(text)) {
-      reply = await statusMessage(cid);
-      await sendTelegramTo(chatId, reply + firma, { dashboardButton: true });
-      const wk = await weeklyChart(cid);
-      if (wk) await sendTelegramPhotoTo(chatId, wk.url, wk.caption);
+      for (const c of misCuentas) {
+        const r = await statusMessage(c.id);
+        await sendTelegramTo(chatId, r + firmaDe(c), { dashboardButton: true });
+        const wk = await weeklyChart(c.id);
+        if (wk) await sendTelegramPhotoTo(chatId, wk.url, wk.caption);
+      }
       return NextResponse.json({ ok: true });
     }
     else if (/(12|doce)\s*meses|^\/?meses$/.test(text)) {
-      const det = await monthlyDetailMessage(cid);
-      await sendTelegramTo(chatId, det.text + firma, { dashboardButton: true });
-      if (det.chart) await sendTelegramPhotoTo(chatId, det.chart.url, det.chart.caption);
+      for (const c of misCuentas) {
+        const det = await monthlyDetailMessage(c.id);
+        await sendTelegramTo(chatId, det.text + firmaDe(c), { dashboardButton: true });
+        if (det.chart) await sendTelegramPhotoTo(chatId, det.chart.url, det.chart.caption);
+      }
       return NextResponse.json({ ok: true });
     }
-    else if (/^\/?(consejos?|tips)$/.test(text)) reply = await adviceMessage(cid);
-    else if (/^\/?(factura|recibo)$/.test(text)) reply = await invoiceMessage(cid);
+    else if (/^\/?(consejos?|tips)$/.test(text)) {
+      for (const c of misCuentas) await sendTelegramTo(chatId, (await adviceMessage(c.id)) + firmaDe(c), { dashboardButton: true });
+      return NextResponse.json({ ok: true });
+    }
+    else if (/^\/?(factura|recibo)$/.test(text)) {
+      for (const c of misCuentas) await sendTelegramTo(chatId, (await invoiceMessage(c.id)) + firmaDe(c), { dashboardButton: true });
+      return NextResponse.json({ ok: true });
+    }
     else if (/^\/?(grafica|gráfica|grafico|gráfico)s?$/.test(text)) {
-      const charts = await chartUrls(cid);
-      if (!charts.length) reply = 'Todavía no hay suficientes datos para graficar.';
-      else {
-        for (const ch of charts) await sendTelegramPhotoTo(chatId, ch.url, ch.caption);
-        return NextResponse.json({ ok: true });
+      let alguna = false;
+      for (const c of misCuentas) {
+        const charts = await chartUrls(c.id);
+        for (const ch of charts) { alguna = true; await sendTelegramPhotoTo(chatId, ch.url, `${ch.caption} · ${c.nombre || 'tu cuenta'}`); }
       }
+      if (!alguna) reply = 'Todavía no hay suficientes datos para graficar.';
+      else return NextResponse.json({ ok: true });
     }
     else if (/^\/(start|help)$|^ayuda$|^hola$/.test(text)) reply = helpMessage();
     else if (!yo.puedeAsistente) {

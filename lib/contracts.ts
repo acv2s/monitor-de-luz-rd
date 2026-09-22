@@ -59,17 +59,43 @@ export async function contratosActivos(): Promise<Contrato[]> {
     SELECT * FROM contracts WHERE email IS NOT NULL AND password IS NOT NULL ORDER BY id`;
 }
 
-/** El contrato que le toca ver a quien está en sesión. */
-export async function contratoDeUsuario(uid: number | 'maestro'): Promise<Contrato | null> {
-  if (uid === 'maestro') return contratoDelDueno();
+/**
+ * TODAS las cuentas que una persona puede ver: las suyas y las compartidas.
+ * Una persona puede tener varias (la casa, el negocio, la de la mamá…).
+ */
+export async function contratosDeUsuario(uid: number | 'maestro'): Promise<Contrato[]> {
   const db = sql();
-  const [propio] = await db<Contrato[]>`SELECT * FROM contracts WHERE owner_id = ${uid} ORDER BY id LIMIT 1`;
-  if (propio) return propio;
-  const [compartido] = await db<Contrato[]>`
+  if (uid === 'maestro') {
+    await contratoDelDueno(); // crea el primero si hace falta
+    return db<Contrato[]>`SELECT * FROM contracts WHERE owner_id IS NULL ORDER BY id`;
+  }
+  const propios = await db<Contrato[]>`SELECT * FROM contracts WHERE owner_id = ${uid} ORDER BY id`;
+  const compartidos = await db<Contrato[]>`
     SELECT c.* FROM contracts c
     JOIN contract_members m ON m.contract_id = c.id
-    WHERE m.user_id = ${uid} ORDER BY c.id LIMIT 1`;
-  return compartido ?? null;
+    WHERE m.user_id = ${uid} ORDER BY c.id`;
+  return [...propios, ...compartidos.filter((c) => !propios.some((p) => p.id === c.id))];
+}
+
+/**
+ * El contrato que le toca ver a quien está en sesión. Con `preferido` (la
+ * cuenta elegida en el selector) se devuelve esa, si de verdad es suya.
+ */
+export async function contratoDeUsuario(uid: number | 'maestro', preferido: number | null = null): Promise<Contrato | null> {
+  const todos = await contratosDeUsuario(uid);
+  if (preferido != null) {
+    const elegido = todos.find((c) => c.id === preferido);
+    if (elegido) return elegido;
+  }
+  return todos[0] ?? null;
+}
+
+/** Otra cuenta más para la misma persona (otro NIC, otra casa). */
+export async function crearOtraCuenta(uid: number | 'maestro'): Promise<Contrato> {
+  const owner = uid === 'maestro' ? null : uid;
+  const [c] = await sql()<Contrato[]>`
+    INSERT INTO contracts (nombre, owner_id) VALUES ('Cuenta nueva', ${owner}) RETURNING *`;
+  return c;
 }
 
 /** ¿El contrato es suyo o se lo compartieron? */

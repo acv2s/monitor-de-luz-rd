@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const sesion = await leerCookie(req.cookies.get(COOKIE)?.value, maestra);
   if (!sesion) return NextResponse.redirect(new URL('/entrar', req.url), 303);
 
-  const c = await contratoDeUsuario(sesion.uid);
+  const c = await contratoDeUsuario(sesion.uid, Number(req.cookies.get('cuenta')?.value) || null);
   if (!c) return NextResponse.json({ error: 'No tienes una cuenta asociada.' }, { status: 404 });
 
   const db = sql();

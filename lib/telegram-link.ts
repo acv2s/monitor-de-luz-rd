@@ -114,8 +114,16 @@ export async function vincular(chatId: string, codigo: string): Promise<string |
 export async function chatsDelContrato(contractId: number): Promise<string[]> {
   try {
     const db = sql();
+    // Además de los chats ligados a ESTE contrato, los chats del dueño del
+    // contrato: quien tiene varias cuentas recibe los avisos de todas en su
+    // mismo chat (cada aviso ya dice de qué cuenta es).
     const filas = await db<{ chat_id: string }[]>`
-      SELECT chat_id FROM telegram_recipients WHERE authorized AND contract_id = ${contractId}`;
+      SELECT DISTINCT t.chat_id
+      FROM telegram_recipients t, contracts c
+      WHERE c.id = ${contractId} AND t.authorized AND (
+        t.contract_id = ${contractId}
+        OR (c.owner_id IS NOT NULL AND t.user_id = c.owner_id)
+        OR (c.owner_id IS NULL AND t.user_id IS NULL))`;
     const chats = filas.map((f) => f.chat_id);
 
     // Chats de antes de separar las cuentas: no tienen contrato ni usuario,

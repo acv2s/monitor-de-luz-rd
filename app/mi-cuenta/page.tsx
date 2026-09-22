@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers';
 import { ensureSchema, sql } from '@/lib/db';
 import { leerCookie, COOKIE } from '@/lib/session';
-import { contratoDeUsuario } from '@/lib/contracts';
+import { contratoDeUsuario, contratosDeUsuario } from '@/lib/contracts';
+import { CuentasSwitch } from '@/components/CuentasSwitch';
 import { DISTRIBUIDORAS } from '@/lib/utilities';
 import { codigoDeEnlace } from '@/lib/telegram-link';
 import { botUsername } from '@/lib/telegram';
@@ -17,6 +18,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
   const sesion = await leerCookie((await cookies()).get(COOKIE)?.value, maestra);
 
   let contrato = null;
+  let cuentas: Awaited<ReturnType<typeof contratosDeUsuario>> = [];
   let dueno: string | null = null;
   let dbError: string | null = null;
   let codigo: string | null = null;
@@ -24,7 +26,10 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
   let tieneDatos = false;
   try {
     await ensureSchema();
-    if (sesion) contrato = await contratoDeUsuario(sesion.uid);
+    if (sesion) {
+      cuentas = await contratosDeUsuario(sesion.uid);
+      contrato = await contratoDeUsuario(sesion.uid, Number((await cookies()).get('cuenta')?.value) || null);
+    }
     if (sesion) {
       codigo = await codigoDeEnlace(sesion.uid);
       bot = await botUsername();
@@ -53,6 +58,8 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
           </a>
         </div>
       </header>
+
+      <CuentasSwitch cuentas={cuentas} activa={contrato?.id ?? null} volver="/mi-cuenta" conNueva={!!sesion} />
 
       {q.ok && <section className="card"><div className="meta-now">Guardado. En la próxima corrida se leerán tus datos.</div></section>}
       {dbError && <section className="card"><pre className="log">{dbError}</pre></section>}
