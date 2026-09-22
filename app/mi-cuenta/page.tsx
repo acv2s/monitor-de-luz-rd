@@ -80,6 +80,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
         </section>
       ) : (
         <ContratoForm
+          key={contrato.id}
           contrato={contrato}
           distribuidoras={DISTRIBUIDORAS}
           primera={!tieneDatos}
@@ -102,6 +103,23 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
             en un archivo, cuando quieras.
           </p>
           <a className="wz-next" href="/api/exportar">Descargar mis datos</a>
+        </section>
+      )}
+
+      {contrato && puedeEditar && cuentas.filter((c) => (sesion?.uid === 'maestro' ? c.owner_id === null : c.owner_id === sesion?.uid)).length > 1 && (
+        <section className="card">
+          <details>
+            <summary className="mh-note">Eliminar esta cuenta ({contrato.nombre || `Cuenta ${contrato.id}`})</summary>
+            <p className="desc">
+              Se borra la cuenta con su consumo, sus facturas y sus PDF guardados. Esto no se puede deshacer.
+              Las demás cuentas no se tocan.
+            </p>
+            <form method="post" action="/api/cuenta">
+              <input type="hidden" name="accion" value="eliminar" />
+              <input type="hidden" name="id" value={contrato.id} />
+              <button className="btn-danger" type="submit">Eliminar esta cuenta y sus datos</button>
+            </form>
+          </details>
         </section>
       )}
 

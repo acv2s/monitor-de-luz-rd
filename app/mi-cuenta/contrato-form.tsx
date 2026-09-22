@@ -173,7 +173,7 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado, ar
           <input type="password" name="password" placeholder={contrato.password ? '••••••••' : 'Tu contraseña'} autoComplete="off" />
         </label>
         <label className="cfg-row">
-          <span className="cfg-l">NIC<small>Opcional: si lo dejas vacío se detecta solo.</small></span>
+          <span className="cfg-l">NIC<small>Si es tu única cuenta puedes dejarlo vacío y se detecta solo. Con varias cuentas bajo el mismo acceso, pon en cada una SU NIC.</small></span>
           <input type="text" name="nic" defaultValue={contrato.nic ?? ''} autoComplete="off" />
         </label>
 

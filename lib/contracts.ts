@@ -90,12 +90,31 @@ export async function contratoDeUsuario(uid: number | 'maestro', preferido: numb
   return todos[0] ?? null;
 }
 
-/** Otra cuenta más para la misma persona (otro NIC, otra casa). */
-export async function crearOtraCuenta(uid: number | 'maestro'): Promise<Contrato> {
+/**
+ * Otra cuenta más para la misma persona. Lo típico es OTRO contrato (otro
+ * NIC) bajo el MISMO acceso de la oficina virtual, así que se copian las
+ * credenciales de la cuenta de partida: a la persona solo le queda ponerle
+ * nombre y el NIC de ese contrato (obligatorio cuando comparten acceso,
+ * para que cada cuenta lea lo suyo).
+ */
+export async function crearOtraCuenta(uid: number | 'maestro', desde: Contrato | null = null): Promise<Contrato> {
   const owner = uid === 'maestro' ? null : uid;
   const [c] = await sql()<Contrato[]>`
-    INSERT INTO contracts (nombre, owner_id) VALUES ('Cuenta nueva', ${owner}) RETURNING *`;
+    INSERT INTO contracts (nombre, owner_id, utility, email, password)
+    VALUES ('Cuenta nueva', ${owner}, ${desde?.utility ?? 'edenorte'}, ${desde?.email ?? null}, ${desde?.password ?? null})
+    RETURNING *`;
   return c;
+}
+
+/** Borra una cuenta extra CON sus datos. La vinculación de chats se suelta. */
+export async function eliminarCuenta(id: number): Promise<void> {
+  const db = sql();
+  for (const t of ['teleconsumo_snapshots', 'daily_consumption', 'invoices', 'monthly_consumption', 'alerts', 'runs', 'portal_probes']) {
+    await db.unsafe(`DELETE FROM ${t} WHERE contract_id = $1`, [id]);
+  }
+  await db`DELETE FROM contract_members WHERE contract_id = ${id}`;
+  await db`UPDATE telegram_recipients SET contract_id = NULL WHERE contract_id = ${id}`;
+  await db`DELETE FROM contracts WHERE id = ${id}`;
 }
 
 /** ¿El contrato es suyo o se lo compartieron? */
