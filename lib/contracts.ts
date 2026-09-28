@@ -62,18 +62,27 @@ export async function contratosActivos(): Promise<Contrato[]> {
 /**
  * TODAS las cuentas que una persona puede ver: las suyas y las compartidas.
  * Una persona puede tener varias (la casa, el negocio, la de la mamá…).
+ *
+ * Ojo: los BIGINT llegan del driver como TEXTO ("2"), y compararlos con un
+ * número (2 === "2" → false) rompía el selector de cuentas sin dar error.
+ * Aquí se convierten una sola vez y todo lo demás compara números.
  */
 export async function contratosDeUsuario(uid: number | 'maestro'): Promise<Contrato[]> {
   const db = sql();
+  const numerico = (c: Contrato): Contrato => ({
+    ...c,
+    id: Number(c.id),
+    owner_id: c.owner_id == null ? null : Number(c.owner_id),
+  });
   if (uid === 'maestro') {
     await contratoDelDueno(); // crea el primero si hace falta
-    return db<Contrato[]>`SELECT * FROM contracts WHERE owner_id IS NULL ORDER BY id`;
+    return (await db<Contrato[]>`SELECT * FROM contracts WHERE owner_id IS NULL ORDER BY id`).map(numerico);
   }
-  const propios = await db<Contrato[]>`SELECT * FROM contracts WHERE owner_id = ${uid} ORDER BY id`;
-  const compartidos = await db<Contrato[]>`
+  const propios = (await db<Contrato[]>`SELECT * FROM contracts WHERE owner_id = ${uid} ORDER BY id`).map(numerico);
+  const compartidos = (await db<Contrato[]>`
     SELECT c.* FROM contracts c
     JOIN contract_members m ON m.contract_id = c.id
-    WHERE m.user_id = ${uid} ORDER BY c.id`;
+    WHERE m.user_id = ${uid} ORDER BY c.id`).map(numerico);
   return [...propios, ...compartidos.filter((c) => !propios.some((p) => p.id === c.id))];
 }
 
