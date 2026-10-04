@@ -45,6 +45,13 @@ async function loadCiclo(cid: number | null) {
     : [];
   const dias = daily.filter((d) => d.kwh > 0);
   const avg = dias.length ? dias.reduce((a, b) => a + b.kwh, 0) / dias.length : 0;
+  // Número del portal no creíble (cuentas telemedidas): mandan los días.
+  const { cuadraConLosDias } = await import('./analysis');
+  if (!cuadraConLosDias(snap.consumo, daily)) {
+    snap.consumo = Math.round(daily.reduce((a, b) => a + b.kwh, 0));
+    const proyDias = Math.round(avg * 31);
+    if (snap.proyeccion == null || snap.proyeccion > proyDias * 2) snap.proyeccion = proyDias;
+  }
   const transcurridos = snap.cycle_start && snap.datos_hasta
     ? Math.round((Date.parse(snap.datos_hasta) - Date.parse(snap.cycle_start)) / 86400000) : 0;
   const restantes = Math.max(0, 31 - transcurridos);

@@ -32,6 +32,17 @@ async function buildContext(cid: number | null): Promise<string> {
     SELECT to_char(day,'YYYY-MM-DD') AS day, kwh::float AS kwh FROM daily_consumption
     WHERE nic = ${snap.nic} AND (${cid}::bigint IS NULL OR contract_id = ${cid})
     ORDER BY day DESC LIMIT 120`;
+  // Número del portal no creíble (cuentas telemedidas): mandan los días del ciclo.
+  {
+    const { cuadraConLosDias } = await import('./analysis');
+    const delCiclo = snap.cycle_start ? daily.filter((d) => d.day >= snap.cycle_start) : daily;
+    if (!cuadraConLosDias(snap.consumo, delCiclo)) {
+      snap.consumo = Math.round(delCiclo.reduce((a: number, b: any) => a + b.kwh, 0));
+      const avgD = delCiclo.length ? snap.consumo / delCiclo.length : 0;
+      const proyDias = Math.round(avgD * 31);
+      if (snap.proyeccion == null || snap.proyeccion > proyDias * 2) snap.proyeccion = proyDias;
+    }
+  }
   const invoices = await db<any[]>`
     SELECT to_char(periodo_fin,'YYYY-MM-DD') AS mes, consumo_kwh, facturado_rd::float AS facturado_rd,
            total_a_pagar::float AS total, to_char(pague_antes_de,'YYYY-MM-DD') AS vence, precio_kwh::float AS precio_kwh, analysis

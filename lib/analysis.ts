@@ -79,3 +79,18 @@ export function explainInvoice(inv: InvoiceData, daily: DailyRow[], previous?: {
   }
   return parts.join(' ');
 }
+
+/**
+ * ¿El "consumo hasta la fecha" del portal cuadra con los días publicados?
+ * En las cuentas telemedidas la página trae otras etiquetas y el lector
+ * puede agarrar un número ajeno (la lectura del medidor) como si fuera el
+ * consumo del ciclo: salía un acumulado gigante con días diarios normales.
+ * Si el portal dice MUCHO más que la suma de los días (con margen por el
+ * atraso de publicación), no es creíble y mandan los días guardados.
+ */
+export function cuadraConLosDias(consumoPortal: number | null | undefined, daily: { kwh: number }[]): boolean {
+  if (consumoPortal == null || daily.length < 5) return true;
+  const suma = daily.reduce((a, b) => a + b.kwh, 0);
+  const avg = suma / daily.length;
+  return consumoPortal <= suma + Math.max(5 * avg, 40);
+}

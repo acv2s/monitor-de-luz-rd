@@ -338,6 +338,20 @@ async function procesarContrato(c: Contrato, log: string[], silencioso = false):
 
     for (const nic of nics) {
       const { data } = await client.getTeleconsumo(nic);
+      // Cuentas telemedidas: la página trae otras etiquetas y el lector
+      // puede tomar la lectura del medidor como "consumo del ciclo". Si el
+      // número no cuadra con los días publicados, mandan los días.
+      {
+        const { cuadraConLosDias } = await import('./analysis');
+        if (!cuadraConLosDias(data.consumoHastaFechaKwh, data.daily)) {
+          const suma = Math.round(data.daily.reduce((a, b) => a + b.kwh, 0));
+          const avgD = data.daily.length ? suma / data.daily.length : 0;
+          apunta(`[${etiqueta}] el consumo del portal (${data.consumoHastaFechaKwh} kWh) no cuadra con los días publicados (${suma} kWh): se usa la suma de los días`);
+          data.consumoHastaFechaKwh = suma;
+          const proyDias = Math.round(avgD * 31);
+          if (data.proyeccionKwh == null || data.proyeccionKwh > proyDias * 2) data.proyeccionKwh = proyDias;
+        }
+      }
       // Anota lo que veía el portal, para aprender su hora de publicación.
       await anotarSonda(c.id, data.datosHasta ?? null);
 

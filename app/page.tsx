@@ -1,5 +1,5 @@
 import { sql, ensureSchema } from '@/lib/db';
-import { fmtRD, fmtDate, monthLabel } from '@/lib/analysis';
+import { fmtRD, fmtDate, monthLabel, cuadraConLosDias } from '@/lib/analysis';
 import { DailyChart, MonthlyChart, BudgetChart, type BudgetRow } from '@/components/Charts';
 import { Gauge, Chip, House } from '@/components/Ui';
 import { TopBar } from '@/components/TopBar';
@@ -119,10 +119,13 @@ export default async function Page() {
 
   const { THRESHOLD, meta, contrato, cuentas, snap, daily, allDaily, monthly, invoices, alerts, lastRun, pricing, ultimaFactura } = data!;
   // Si el portal reportó 0 pero los días guardados del ciclo suman más, se
-  // cree en lo guardado: una lectura floja del portal no borra lo que ya se vio.
+  // cree en lo guardado; y si reportó MUCHO más de lo que suman los días
+  // (cuentas telemedidas: el lector agarraba la lectura del medidor), el
+  // número del portal no es creíble y mandan los días.
   const sumaDias = Math.round(daily.reduce((a, b) => a + b.kwh, 0));
-  const consumo = Math.max(snap?.consumo ?? 0, sumaDias);
-  const proyPortal = snap?.proyeccion ?? 0;
+  const portalCreible = cuadraConLosDias(snap?.consumo, daily);
+  const consumo = portalCreible ? Math.max(snap?.consumo ?? 0, sumaDias) : sumaDias;
+  const proyPortal = portalCreible ? (snap?.proyeccion ?? 0) : 0;
   const pct = Math.min(100, Math.round((consumo / THRESHOLD) * 100));
   const dias = daily.filter((d) => d.kwh > 0);
   // Para explicar por qué no hay pesos: ¿hay facturas?, ¿se pudieron leer?
@@ -360,7 +363,7 @@ export default async function Page() {
                 <Chip icon="peak" tone="red" />
                 <div>
                   <div className="v">{snap.valor_mayor ?? '—'} kWh</div>
-                  <div className="l">Día más alto · {fmtDate(snap.dia_mayor)}</div>
+                  <div className="l">Día más alto{snap.dia_mayor ? ` · ${fmtDate(snap.dia_mayor)}` : ''}</div>
                 </div>
               </div>
             </div>
