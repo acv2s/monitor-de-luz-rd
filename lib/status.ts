@@ -70,20 +70,21 @@ export async function statusMessage(cid: number | null = null): Promise<string> 
   const pct = Math.round((consumo / THRESHOLD) * 100);
   const icon = consumo >= THRESHOLD ? '🚨' : proy >= THRESHOLD ? '⚠️' : '✅';
   const ult7 = dias.slice(-7);
+  const ultimo = dias[dias.length - 1] ?? null;
+  // Una línea por dato, con su etiqueta: se lee de un vistazo, sin párrafos.
   const lines = [
-    `${icon} <b>Tu consumo · NIC ${snap.nic}</b>`,
+    `${icon} <b>Cómo vas</b>`,
     '',
-    `<b>Ciclo:</b> ${fmtDate(snap.cycle_start)} → hoy (día ${transcurridos}, faltan ~${restantes})`,
-    `<b>Acumulado:</b> ${consumo} kWh de ${THRESHOLD}`,
-    `${barra(pct)} ${pct}%`,
-    '',
-    `<b>Proyección:</b> ${proy} kWh ${proy >= THRESHOLD ? `❌ (se pasa por ${proy - THRESHOLD})` : `✅ (margen de ${THRESHOLD - proy})`}`,
-    `<b>Promedio:</b> ${avg.toFixed(1)} kWh/día · <b>Meta:</b> máx. ${permitido.toFixed(1)} kWh/día`,
-  ];
+    `📅 <b>Ciclo:</b> ${fmtDate(snap.cycle_start)} → hoy · día ${transcurridos}, faltan ~${restantes}`,
+    ultimo ? `🕓 <b>Última lectura:</b> ${fmtDate(ultimo.day)} · ${ultimo.kwh} kWh` : '',
+    `⚡ <b>Consumo del ciclo:</b> ${consumo} kWh de ${THRESHOLD} (${pct}%)`,
+    `${barra(pct)}`,
+    `📈 <b>Proyección al cierre:</b> ${proy} kWh ${proy >= THRESHOLD ? `❌ se pasa por ${proy - THRESHOLD}` : `✅ margen de ${THRESHOLD - proy}`}`,
+    `📊 <b>Promedio:</b> ${avg.toFixed(1)} kWh/día · <b>tope para tu meta:</b> ${permitido.toFixed(1)}`,
+  ].filter(Boolean);
   const pricing = await getPricing(cid);
   if (pricing) {
-    lines.push('', `💵 <b>Gastado hasta hoy:</b> ~${fmtRD(estimateCost(consumo, pricing))}`,
-      `<b>Pagarías al cierre:</b> ~${fmtRD(estimateCost(proy, pricing))} (kWh a ${fmtRD(pricing.precioKwh)}${proy >= THRESHOLD && pricing.precioKwhAlto ? `; ${fmtRD(pricing.precioKwhAlto)} al pasar los ${THRESHOLD}` : ''})`);
+    lines.push('', `💵 <b>Gastado:</b> ~${fmtRD(estimateCost(consumo, pricing))} · <b>Al cierre:</b> ~${fmtRD(estimateCost(proy, pricing))}`);
   }
   if (ult7.length >= 3) {
     lines.push('', `<b>Últimos ${ult7.length} días:</b> ${sparkline(ult7.map((d) => d.kwh))}`,

@@ -143,7 +143,7 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
         : dif >= 25 ? ` — ${dif}% por encima de tu promedio, revisa qué estuvo prendido ese día`
         : dif <= -20 ? ` — ${Math.abs(dif)}% por debajo de tu promedio, así se ahorra`
         : ' — en línea con tu promedio';
-      cierre = `\n<b>${fmtDate(last.day)}</b>, el último día publicado: ${last.kwh} kWh${juicio}.`;
+      cierre = `\n🕓 <b>Último día publicado:</b> ${fmtDate(last.day)} · ${last.kwh} kWh${juicio}`;
 
       // Los picos son lo más accionable: son los días donde de verdad se fue
       // el dinero, y saberlos es lo que permite corregir a tiempo.
@@ -164,7 +164,16 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
     // El mensaje llega solo todos los días: siempre dice cómo apagarlo, para
     // que nadie sienta que el bot le escribe sin permiso.
     const pie = '\n\n<i>Este resumen llega solo cada día. Se apaga o se cambia la hora en la página, en «Mi cuenta».</i>';
-    const ok = await avisarContrato(c.id, `📊 <b>${etiquetaDe(c)} · NIC ${nic}</b>\n${resumen}\nVas por el ${pct}% del límite de ${THRESHOLD} kWh.${cierre}${pie}`);
+    // Una línea por dato, con su etiqueta: nada de párrafos corridos.
+    const cab = [
+      `📊 <b>${etiquetaDe(c)} · NIC ${nic}</b>`,
+      '',
+      `📅 <b>Ciclo:</b> ${fmtDate(t.fechaUltimaFactura)} → ${fmtDate(t.datosHasta)}${restantes != null ? ` · faltan ~${restantes} días` : ''}`,
+      `⚡ <b>Consumo:</b> ${consumo} kWh de ${THRESHOLD} (${pct}%)`,
+      `📈 <b>Proyección al cierre:</b> ${proy} kWh`,
+      `📊 <b>Promedio:</b> ${avg.toFixed(1)} kWh/día`,
+    ].join('\n');
+    const ok = await avisarContrato(c.id, `${cab}${cierre}${pie}`);
     log.push(`resumen diario ${ok ? 'enviado' : 'NO enviado'}`);
     try {
       const { weeklyChart } = await import('./status');

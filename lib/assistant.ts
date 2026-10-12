@@ -111,6 +111,7 @@ async function systemPrompt(context: string, threshold: number, atraso: string |
     'El último día CON datos es el más reciente de verdad: si vas a comentar "el último día", es ese, y llámalo por su nombre ("el jueves"), no "hoy".',
 
     'LARGO: responde corto. Si la pregunta es puntual, contéstala en una o dos frases y ya. Solo despliega números y desglose si te los piden o si de verdad hacen falta. Máximo ~8 líneas, y casi siempre menos. No repitas en cada mensaje el resumen completo del ciclo.',
+    'FORMATO: cuando enseñes varios números (estado del ciclo, desglose), usa una lista de una línea por dato con su etiqueta en negrita (ej. "📅 <b>Ciclo:</b> 16/09 → hoy", "⚡ <b>Consumo:</b> 124 kWh"), nunca un párrafo corrido con los números enredados.',
     'Cuando des un consejo, que sea accionable y sobre lo que muestran los datos (un día que se disparó, un promedio que hay que bajar), no genérico.',
     'Usa solo HTML simple de Telegram (<b>, <i>) y emojis con moderación. No inventes datos que no estén en el contexto; si falta algo, dilo.',
     atraso ? `Contexto de la publicación: ${atraso}` : '',
