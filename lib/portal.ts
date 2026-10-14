@@ -89,7 +89,33 @@ export class PortalClient {
     return /type=["']password["']/i.test(html);
   }
 
+  /**
+   * El portal tiene un bug conocido: a veces el PRIMER intento devuelve
+   * "credenciales incorrectas" aunque estén bien, y al refrescar y volver a
+   * mandar, entra. Por eso el login se intenta hasta 3 veces, con sesión
+   * (cookies) fresca y una pequeña pausa entre intentos. Solo después del
+   * tercer rechazo se da por fallido de verdad.
+   */
   async login(): Promise<void> {
+    let ultimo: Error | null = null;
+    for (let intento = 1; intento <= 3; intento++) {
+      try {
+        await this.intentoLogin();
+        return;
+      } catch (e: any) {
+        ultimo = e;
+        // Solo se reintenta el rechazo del portal; un fallo de red u otra
+        // cosa sube de una vez.
+        if (!/login fallido/i.test(e?.message || '')) throw e;
+        this.cookies.clear();
+        this.loggedIn = false;
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+    throw ultimo ?? new Error('Login fallido');
+  }
+
+  private async intentoLogin(): Promise<void> {
     // 1) obtener el formulario (la raíz redirige al login si no hay sesión)
     let html = await this.getHtml('/user/login');
     if (!PortalClient.isLoginPage(html)) html = await this.getHtml('/');
