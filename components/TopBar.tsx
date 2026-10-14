@@ -18,7 +18,7 @@ function Icon({ name }: { name: keyof typeof ICONS }) {
 }
 
 /** Barra de acciones: configuración, recargar datos y selector de tema. */
-export function TopBar({ status }: { status: { ok: boolean; when: string } | null }) {
+export function TopBar({ status, admin = false }: { status: { ok: boolean; when: string } | null; admin?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [theme, setTheme] = useState<Theme>('system');
@@ -71,12 +71,16 @@ export function TopBar({ status }: { status: { ok: boolean; when: string } | nul
       >
         <Icon name="refresh" />
       </button>
-      <a className="icon-btn solo" href="/mi-cuenta" title="Mi cuenta de luz" aria-label="Mi cuenta de luz">
+      {/* La configuración del usuario normal ES Mi cuenta: su luz, su meta,
+          sus avisos. El engranaje de administración solo existe para el admin. */}
+      <a className="icon-btn solo" href="/mi-cuenta" title="Configurar mi luz" aria-label="Configurar mi luz">
         <svg viewBox="0 0 24 24" aria-hidden><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor" /></svg>
       </a>
-      <a className="icon-btn solo" href="/config" title="Configuración" aria-label="Configuración">
-        <Icon name="gear" />
-      </a>
+      {admin && (
+        <a className="icon-btn solo" href="/config" title="Administración" aria-label="Administración">
+          <Icon name="gear" />
+        </a>
+      )}
       <form method="post" action="/api/auth">
         <input type="hidden" name="accion" value="salir" />
         <button className="icon-btn solo" type="submit" title="Salir" aria-label="Salir">

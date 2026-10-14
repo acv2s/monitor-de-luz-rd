@@ -108,18 +108,16 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
 
       {contrato && puedeEditar && cuentas.filter((c) => (sesion?.uid === 'maestro' ? c.owner_id === null : c.owner_id === sesion?.uid)).length > 1 && (
         <section className="card">
-          <details>
-            <summary className="mh-note">Eliminar esta cuenta ({contrato.nombre || `Cuenta ${contrato.id}`})</summary>
-            <p className="desc">
-              Se borra la cuenta con su consumo, sus facturas y sus PDF guardados. Esto no se puede deshacer.
-              Las demás cuentas no se tocan.
-            </p>
-            <form method="post" action="/api/cuenta">
-              <input type="hidden" name="accion" value="eliminar" />
-              <input type="hidden" name="id" value={contrato.id} />
-              <button className="btn-danger" type="submit">Eliminar esta cuenta y sus datos</button>
-            </form>
-          </details>
+          <h2><span className="g-ico">🗑️</span> Eliminar esta cuenta</h2>
+          <p className="desc">
+            Borra <b>{contrato.nombre || `la cuenta ${contrato.id}`}</b> con su consumo, sus facturas y sus
+            PDF guardados. No se puede deshacer; tus demás cuentas no se tocan.
+          </p>
+          <form method="post" action="/api/cuenta">
+            <input type="hidden" name="accion" value="eliminar" />
+            <input type="hidden" name="id" value={contrato.id} />
+            <button className="btn-danger" type="submit">Eliminar esta cuenta y sus datos</button>
+          </form>
         </section>
       )}
 
