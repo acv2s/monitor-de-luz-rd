@@ -18,7 +18,16 @@ function Icon({ name }: { name: keyof typeof ICONS }) {
 }
 
 /** Barra de acciones: configuración, recargar datos y selector de tema. */
-export function TopBar({ status, admin = false }: { status: { ok: boolean; when: string } | null; admin?: boolean }) {
+/**
+ * La MISMA barra en todas las pantallas (panel, Mi cuenta, Configuración):
+ * tema, recargar, mi luz, salir — y el engranaje solo para el admin. Fuera
+ * del panel aparece además el botón de volver al inicio.
+ */
+export function TopBar({ status = null, admin = false, actual = 'panel' }: {
+  status?: { ok: boolean; when: string } | null;
+  admin?: boolean;
+  actual?: 'panel' | 'cuenta' | 'config';
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [theme, setTheme] = useState<Theme>('system');
@@ -73,11 +82,16 @@ export function TopBar({ status, admin = false }: { status: { ok: boolean; when:
       </button>
       {/* La configuración del usuario normal ES Mi cuenta: su luz, su meta,
           sus avisos. El engranaje de administración solo existe para el admin. */}
-      <a className="icon-btn solo" href="/mi-cuenta" title="Configurar mi luz" aria-label="Configurar mi luz">
+      {actual !== 'panel' && (
+        <a className="icon-btn solo" href="/" title="Volver al panel" aria-label="Volver al panel">
+          <svg viewBox="0 0 24 24" aria-hidden><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </a>
+      )}
+      <a className={`icon-btn solo ${actual === 'cuenta' ? 'on' : ''}`} href="/mi-cuenta" title="Configurar mi luz" aria-label="Configurar mi luz">
         <svg viewBox="0 0 24 24" aria-hidden><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor" /></svg>
       </a>
       {admin && (
-        <a className="icon-btn solo" href="/config" title="Administración" aria-label="Administración">
+        <a className={`icon-btn solo ${actual === 'config' ? 'on' : ''}`} href="/config" title="Administración" aria-label="Administración">
           <Icon name="gear" />
         </a>
       )}

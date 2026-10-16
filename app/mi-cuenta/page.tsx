@@ -8,6 +8,7 @@ import { codigoDeEnlace } from '@/lib/telegram-link';
 import { botUsername } from '@/lib/telegram';
 import { EnlaceCopiable } from '../config/copiar';
 import { ContratoForm } from './contrato-form';
+import { TopBar } from '@/components/TopBar';
 import { tgLoginActivo } from '@/lib/tg-login';
 
 export const dynamic = 'force-dynamic';
@@ -55,11 +56,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
     <main>
       <header className="top">
         <h1><span className="brand-dot">⚡</span> Mi cuenta de luz</h1>
-        <div className="actions">
-          <a className="icon-btn solo" href="/" title="Volver al panel" aria-label="Volver">
-            <svg viewBox="0 0 24 24" aria-hidden><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </a>
-        </div>
+        <TopBar admin={!!sesion?.admin} actual="cuenta" />
       </header>
 
       <CuentasSwitch cuentas={cuentas} activa={contrato?.id ?? null} volver="/mi-cuenta" conNueva={!!sesion} />

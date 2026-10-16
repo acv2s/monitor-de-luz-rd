@@ -1,5 +1,6 @@
 import { ensureSchema } from '@/lib/db';
 import { SettingsForm } from './settings-form';
+import { TopBar } from '@/components/TopBar';
 import { TelegramCard } from './telegram-card';
 import { PersonasCard } from './personas-card';
 import { urlDeLaApp } from '@/lib/appurl';
@@ -27,11 +28,7 @@ export default async function ConfigPage({ searchParams }: { searchParams: Promi
           <h1>Configuración</h1>
           <div className="sub">Todo se edita aquí, sin volver a desplegar</div>
         </div>
-        <div className="actions">
-          <a className="icon-btn solo" href="/" title="Volver al dashboard" aria-label="Volver al dashboard">
-            <svg viewBox="0 0 24 24" aria-hidden><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </a>
-        </div>
+        <TopBar admin actual="config" />
       </header>
 
       {dbError && (
