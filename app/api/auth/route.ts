@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         const c = await contratoDeUsuario(u.id);
         const propio = c && c.owner_id === u.id;
         const res = volver(req, propio && !c.email && !c.password ? '/empezar' : '/');
-        res.cookies.set(COOKIE, await crearCookie({ uid: u.id, email: u.email, admin: u.admin }, secreto), COOKIE_OPTS);
+        res.cookies.set(COOKIE, await crearCookie({ uid: Number(u.id), email: u.email, admin: u.admin }, secreto), COOKIE_OPTS);
         return res;
       }
       // La contraseña estaba bien: lo que falta es que el dueño apruebe.

@@ -46,7 +46,12 @@ export async function leerCookie(valor: string | undefined, secreto: string): Pr
   for (let i = 0; i < mac.length; i++) dif |= mac.charCodeAt(i) ^ esperado.charCodeAt(i);
   if (dif !== 0) return null;
   try {
-    return JSON.parse(new TextDecoder().decode(deB64url(payload)));
+    const s: Sesion = JSON.parse(new TextDecoder().decode(deB64url(payload)));
+    // Los id de la base llegan como texto ("5") y así quedaron guardados en
+    // las sesiones; todo lo demás compara números. Se normaliza aquí, en el
+    // único lugar por donde pasa toda sesión, para que "5" y 5 sean lo mismo.
+    if (s.uid !== 'maestro') s.uid = Number(s.uid);
+    return s;
   } catch {
     return null;
   }
