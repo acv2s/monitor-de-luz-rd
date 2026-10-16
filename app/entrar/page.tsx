@@ -15,6 +15,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<R
         <p className="auth-sub">Controla tu factura antes de que se dispare.</p>
 
         {q.nuevo && <div className="meta-now">Cuenta creada. Entra con tu correo y contraseña.</div>}
+        {q.vencido && <div className="meta-now warn">Ese enlace ya se usó o venció (duran 10 minutos y sirven una sola vez). Escríbele <b>panel</b> al bot para que te mande otro.</div>}
         {q.pendiente && <div className="meta-now warn">Tu contraseña está bien: lo que falta es que el dueño apruebe tu cuenta. Escríbele para que le dé el visto bueno.</div>}
         {q.cambiada && <div className="meta-now">Contraseña cambiada. Entra con la nueva.</div>}
         {q.e && <div className="meta-now warn">Ese correo o esa contraseña no coinciden. Si no te acuerdas, pide una nueva abajo.</div>}

@@ -72,8 +72,18 @@ export async function statusMessage(cid: number | null = null): Promise<string> 
   const ult7 = dias.slice(-7);
   const ultimo = dias[dias.length - 1] ?? null;
   // Una línea por dato, con su etiqueta: se lee de un vistazo, sin párrafos.
+  // Lo primero es lo que la página oficial no da: cuánto va la factura.
+  const pricing = await getPricing(cid);
+  const dinero = pricing
+    ? [
+        `💵 <b>Tu factura va por: ~${fmtRD(estimateCost(consumo, pricing))}</b>`,
+        `🧾 <b>Al cierre del ciclo: ~${fmtRD(estimateCost(proy, pricing))}</b>${pricing.tarifa?.estimada ? ' <i>(aprox.)</i>' : ''}`,
+      ]
+    : ['💵 <i>Todavía no hay facturas leídas para calcular el monto en pesos.</i>'];
   const lines = [
     `${icon} <b>Cómo vas</b>`,
+    '',
+    ...dinero,
     '',
     `📅 <b>Ciclo:</b> ${fmtDate(snap.cycle_start)} → hoy · día ${transcurridos}, faltan ~${restantes}`,
     ultimo ? `🕓 <b>Última lectura:</b> ${fmtDate(ultimo.day)} · ${ultimo.kwh} kWh` : '',
@@ -82,10 +92,6 @@ export async function statusMessage(cid: number | null = null): Promise<string> 
     `📈 <b>Proyección al cierre:</b> ${proy} kWh ${proy >= THRESHOLD ? `❌ se pasa por ${proy - THRESHOLD}` : `✅ margen de ${THRESHOLD - proy}`}`,
     `📊 <b>Promedio:</b> ${avg.toFixed(1)} kWh/día · <b>tope para tu meta:</b> ${permitido.toFixed(1)}`,
   ].filter(Boolean);
-  const pricing = await getPricing(cid);
-  if (pricing) {
-    lines.push('', `💵 <b>Gastado:</b> ~${fmtRD(estimateCost(consumo, pricing))} · <b>Al cierre:</b> ~${fmtRD(estimateCost(proy, pricing))}`);
-  }
   if (ult7.length >= 3) {
     lines.push('', `<b>Últimos ${ult7.length} días:</b> ${sparkline(ult7.map((d) => d.kwh))}`,
       ult7.map((d) => `${fmtDate(d.day).slice(0, 5)}: ${d.kwh}`).join(' · '));
@@ -287,6 +293,7 @@ export function helpMessage(): string {
     '👋 <b>Monitor de Luz</b> — pregúntame:',
     '',
     '• <b>/consumo</b> (o "¿cómo voy?") — estado del ciclo, proyección y últimos días',
+    '• <b>panel</b> — te mando un enlace para entrar a la página sin contraseña',
     '• <b>/consejos</b> — recomendaciones según tus patrones de consumo',
     '• <b>/factura</b> — resumen de la última factura',
     '• <b>/grafica</b> — las gráficas del consumo como imagen',

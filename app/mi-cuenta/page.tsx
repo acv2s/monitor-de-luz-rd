@@ -8,6 +8,7 @@ import { codigoDeEnlace } from '@/lib/telegram-link';
 import { botUsername } from '@/lib/telegram';
 import { EnlaceCopiable } from '../config/copiar';
 import { ContratoForm } from './contrato-form';
+import { tgLoginActivo } from '@/lib/tg-login';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
   let codigo: string | null = null;
   let bot: string | null = null;
   let tieneDatos = false;
+  let tgActivo = false;
   try {
     await ensureSchema();
     if (sesion) {
@@ -32,6 +34,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
     }
     if (sesion) {
       codigo = await codigoDeEnlace(sesion.uid);
+      tgActivo = await tgLoginActivo(sesion.uid);
       bot = await botUsername();
     }
     if (contrato) {
@@ -118,6 +121,43 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
             <input type="hidden" name="id" value={contrato.id} />
             <button className="btn-danger" type="submit">Eliminar esta cuenta y sus datos</button>
           </form>
+        </section>
+      )}
+
+
+      {sesion && (
+        <section className="card" id="tg-login">
+          <h2><span className="g-ico">🔑</span> Entrar desde Telegram</h2>
+          {q.tg === 'on' && <div className="meta-now">Listo: ya puedes escribirle <b>panel</b> al bot y te manda el enlace para entrar.</div>}
+          {q.tg === 'mal' && <div className="meta-now warn">Ese código no es válido o ya venció. Escríbele <b>panel</b> al bot para que te mande uno nuevo.</div>}
+          {tgActivo ? (
+            <>
+              <p className="desc">
+                Activo. Escríbele <b>panel</b> al bot y te manda un enlace que entra sin contraseña
+                (sirve una sola vez y vence en 10 minutos).
+              </p>
+              {sesion.uid !== 'maestro' && (
+                <form method="post" action="/api/tg-login">
+                  <input type="hidden" name="accion" value="desactivar" />
+                  <button className="btn-danger" type="submit">Desactivar</button>
+                </form>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="desc">
+                Entra al panel sin escribir la contraseña: le escribes <b>panel</b> al bot y te manda un enlace.
+                Para activarlo, escríbele <b>panel</b> al bot ahora, y pon aquí el código de 6 cifras que te responda.
+              </p>
+              <form method="post" action="/api/tg-login" className="cfg">
+                <label className="cfg-row">
+                  <span className="cfg-l">Código que te mandó el bot</span>
+                  <input type="text" name="codigo" inputMode="numeric" maxLength={6} placeholder="123456" autoComplete="one-time-code" />
+                </label>
+                <div className="cfg-actions"><button type="submit">Activar</button></div>
+              </form>
+            </>
+          )}
         </section>
       )}
 

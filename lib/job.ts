@@ -164,9 +164,21 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
     // El mensaje llega solo todos los días: siempre dice cómo apagarlo, para
     // que nadie sienta que el bot le escribe sin permiso.
     const pie = '\n\n<i>Este resumen llega solo cada día. Se apaga o se cambia la hora en la página, en «Mi cuenta».</i>';
+    // Lo que la página oficial NO dice: cuánto va la factura en pesos. Es la
+    // razón de ser del monitor, así que va siempre, de primero y en grande.
+    const { getPricing, estimateCost } = await import('./pricing');
+    const precios = await getPricing(c.id);
+    const dinero = precios
+      ? [
+          `💵 <b>Tu factura va por: ~${fmtRD(estimateCost(consumo, precios))}</b>`,
+          `🧾 <b>Al cierre del ciclo: ~${fmtRD(estimateCost(proy, precios))}</b>${precios.tarifa?.estimada ? ' <i>(aprox., con tarifa de referencia)</i>' : ''}`,
+        ]
+      : ['💵 <i>Todavía no hay facturas leídas para calcular el monto en pesos.</i>'];
     // Una línea por dato, con su etiqueta: nada de párrafos corridos.
     const cab = [
       `📊 <b>${etiquetaDe(c)} · NIC ${nic}</b>`,
+      '',
+      ...dinero,
       '',
       `📅 <b>Ciclo:</b> ${fmtDate(t.fechaUltimaFactura)} → ${fmtDate(t.datosHasta)}${restantes != null ? ` · faltan ~${restantes} días` : ''}`,
       `⚡ <b>Consumo:</b> ${consumo} kWh de ${THRESHOLD} (${pct}%)`,

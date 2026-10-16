@@ -73,6 +73,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // "panel": enlace de un solo uso para entrar a la web sin contraseña.
+  if (/^\/?panel$/i.test(escrito)) {
+    const { tgLoginActivo, crearEnlaceEntrada, pedirCodigoActivacion, MINUTOS_ENLACE } = await import('@/lib/tg-login');
+    const uid = yo.userId ?? 'maestro';
+    const base = await urlDeLaApp();
+    if (await tgLoginActivo(uid)) {
+      const token = await crearEnlaceEntrada(uid);
+      await sendTelegramTo(chatId,
+        `🔑 <b>Tu acceso al panel</b>\n\n<a href="${base}/api/auth/tg?t=${token}">Entrar al panel ahora</a>\n\n` +
+        `<i>Sirve una sola vez y vence en ${MINUTOS_ENLACE} minutos. No lo reenvíes: quien lo abra entra como tú.</i>`);
+    } else {
+      // Activarlo pide probar las dos puntas: el código llega aquí y se
+      // confirma en la web, donde solo entra la persona con su contraseña.
+      const codigo = await pedirCodigoActivacion(uid as number);
+      await sendTelegramTo(chatId,
+        '🔑 ¿Quieres <b>entrar al panel desde aquí</b>, sin escribir la contraseña?\n\n' +
+        'Para activarlo hay que confirmar que eres tú:\n' +
+        `<b>1.</b> Entra a ${base}/mi-cuenta\n` +
+        '<b>2.</b> Busca <b>Entrar desde Telegram</b>\n' +
+        `<b>3.</b> Escribe este código: <b>${codigo}</b>\n\n` +
+        '<i>Vence en 15 minutos. Después, cada vez que me escribas "panel" te mando el enlace.</i>');
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const cid = yo.contractId;
 
   // Sin contrato no se contesta con datos: las consultas dejarían de filtrar

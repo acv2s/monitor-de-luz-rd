@@ -238,3 +238,18 @@ CREATE INDEX IF NOT EXISTS idx_manual_calls ON manual_calls (user_key, at DESC);
 -- (hora de República Dominicana). Apagarlo no apaga las alertas importantes.
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS resumen_diario BOOLEAN NOT NULL DEFAULT true;
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS resumen_hora   SMALLINT NOT NULL DEFAULT 18;
+
+-- ===== Entrar al panel desde Telegram =====
+-- Escribiéndole "panel" al bot llega un enlace de un solo uso que entra sin
+-- contraseña. El dueño lo tiene de fábrica; cada usuario lo activa él mismo
+-- confirmando en la web un código que el bot le manda (dos lados = es él).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tg_login BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tg_login_codigo TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tg_login_codigo_expira TIMESTAMPTZ;
+CREATE TABLE IF NOT EXISTS login_tokens (
+  token      TEXT PRIMARY KEY,
+  uid        TEXT NOT NULL,          -- users.id, o 'maestro'
+  expira_at  TIMESTAMPTZ NOT NULL,
+  usado_at   TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
