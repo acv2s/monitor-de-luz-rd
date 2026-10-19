@@ -1,63 +1,87 @@
 :root {
   color-scheme: light;
-  --bg: #eef2f7;
-  --surface: #ffffff;
-  --border: #e3e9f1;
-  --text: #14202e;
-  --text-2: #51617a;
-  --muted: #8595ab;
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --good: #0d9c62;
-  --warning: #c98500;
-  --critical: #e34948;
-  --grid: #eaeff6;
-  --chip-blue: #e5effb;
-  --chip-green: #e2f6ee;
-  --chip-orange: #fdeee2;
-  --chip-red: #fde9e9;
-  --shadow: 0 1px 3px rgba(20, 45, 80, .06), 0 8px 24px rgba(20, 45, 80, .05);
+  --bg: #EDF0EE;
+  --surface: #FFFFFF;
+  --tile: #EDF0EE;
+  --track: #E3E8E5;
+  --border: #E6E9E7;
+  --text: #111312;
+  --text-2: #4B514E;
+  --muted: #6B716E;
+  --ink: #111312;
+  --on-ink: #FFFFFF;
+  --series-1: #22C55E;
+  --series-2: #EA580C;
+  --bar: #D5DBD8;
+  --good: #15803D;
+  --warning: #EA580C;
+  --critical: #C2410C;
+  --grid: #EEF1EF;
+  --chip-blue: #EDF0EE;
+  --chip-green: #E7F7EC;
+  --chip-orange: #FDECDD;
+  --chip-red: #FDECDD;
+  --pill-ok: #15803D;
+  --pill-alerta: #9A3412;
+  --control: #2563EB;
+  --shadow: none;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0f1621;
-    --surface: #17202e;
-    --border: #24303f;
-    --text: #f2f6fb;
-    --text-2: #a8b7ca;
-    --muted: #7d8ca0;
-    --series-1: #4c95ea;
-    --series-2: #d95926;
-    --good: #35c58c;
-    --warning: #eda100;
-    --critical: #ee6f6f;
-    --grid: #202b3a;
-    --chip-blue: #1c2e45;
-    --chip-green: #16352b;
-    --chip-orange: #3c2a1a;
-    --chip-red: #3d2022;
+    --bg: #0E100F;
+    --surface: #181B19;
+    --tile: #222624;
+    --track: #2A2F2C;
+    --border: #2A2F2C;
+    --text: #F1F4F2;
+    --text-2: #B9C0BC;
+    --muted: #8E9591;
+    --ink: #F1F4F2;
+    --on-ink: #0E100F;
+    --series-1: #22C55E;
+    --series-2: #F97316;
+    --bar: #3A403C;
+    --good: #4ADE80;
+    --warning: #F97316;
+    --critical: #FB923C;
+    --grid: #232724;
+    --chip-blue: #222624;
+    --chip-green: #12301E;
+    --chip-orange: #3A2312;
+    --chip-red: #3A2312;
+    --pill-ok: #4ADE80;
+    --pill-alerta: #FDBA74;
+    --control: #60A5FA;
     --shadow: none;
   }
 }
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #0f1621;
-    --surface: #17202e;
-    --border: #24303f;
-    --text: #f2f6fb;
-    --text-2: #a8b7ca;
-    --muted: #7d8ca0;
-    --series-1: #4c95ea;
-    --series-2: #d95926;
-    --good: #35c58c;
-    --warning: #eda100;
-    --critical: #ee6f6f;
-    --grid: #202b3a;
-    --chip-blue: #1c2e45;
-    --chip-green: #16352b;
-    --chip-orange: #3c2a1a;
-    --chip-red: #3d2022;
+    --bg: #0E100F;
+    --surface: #181B19;
+    --tile: #222624;
+    --track: #2A2F2C;
+    --border: #2A2F2C;
+    --text: #F1F4F2;
+    --text-2: #B9C0BC;
+    --muted: #8E9591;
+    --ink: #F1F4F2;
+    --on-ink: #0E100F;
+    --series-1: #22C55E;
+    --series-2: #F97316;
+    --bar: #3A403C;
+    --good: #4ADE80;
+    --warning: #F97316;
+    --critical: #FB923C;
+    --grid: #232724;
+    --chip-blue: #222624;
+    --chip-green: #12301E;
+    --chip-orange: #3A2312;
+    --chip-red: #3A2312;
+    --pill-ok: #4ADE80;
+    --pill-alerta: #FDBA74;
+    --control: #60A5FA;
     --shadow: none;
 }
 * { box-sizing: border-box; }
@@ -65,7 +89,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font: 15px/1.5 'Geist', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 main { max-width: 1100px; margin: 0 auto; padding: 16px 16px 64px; }
 header.top {
@@ -791,3 +815,157 @@ details.fold > *:not(summary) { margin: 0 20px 18px; }
 .money-desglose > div { display: flex; justify-content: space-between; gap: 12px; }
 .money-desglose dt { margin: 0; font-weight: 400; }
 .money-desglose dd { margin: 0; white-space: nowrap; }
+
+/* =====================================================================
+   Sistema visual Vatio (v3 flat): colores sólidos, sin degradados,
+   sombras ni bordes. El color solo aparece donde hay energía: verde
+   cuando vas bien, naranja cuando hay que mirar. Va al final para
+   ganarle a las reglas anteriores sin reescribirlas todas.
+   ===================================================================== */
+.card, .hero, .coach, details.card, .seg, .icon-btn.solo, .run-chip, .pick-op, .alert-item {
+  border: 0 !important; box-shadow: none !important;
+}
+.card, .hero { border-radius: 24px; background: var(--surface); }
+.coach { background: var(--surface) !important; border-radius: 24px; }
+.coach::before { display: none; }
+h2 { letter-spacing: -0.01em; }
+.desc, .mh-note { color: var(--muted); }
+
+/* Botones: principal en tinta, secundario en baldosa, toques ≥ 44 px */
+.wz-next, .cfg-actions button, .exp-btns button, .btn-ok {
+  min-height: 48px; padding: 0 22px; border: 0; border-radius: 14px;
+  background: var(--ink); color: var(--on-ink); font: inherit; font-weight: 600; font-size: 15px;
+  display: inline-flex; align-items: center; justify-content: center; text-decoration: none; cursor: pointer;
+}
+.wz-next:hover, .cfg-actions button:hover { filter: none; opacity: .88; }
+.btn-danger { min-height: 44px; border-radius: 14px; }
+.link-btn { min-height: 44px; }
+input[type="text"], input[type="password"], input[type="email"], input[type="number"], select {
+  border: 0 !important; background: var(--tile) !important; border-radius: 12px !important; min-height: 46px; color: var(--text);
+}
+input[type="checkbox"] { accent-color: var(--control); }
+.pick-op { background: var(--tile) !important; border-radius: 16px; }
+.pick-op.on { background: var(--ink) !important; color: var(--on-ink); }
+.pick-op.on small { color: inherit; opacity: .75; }
+.meta-now { background: var(--tile); border: 0; border-radius: 14px; }
+.meta-now.warn { background: var(--chip-orange); color: var(--pill-alerta); }
+
+/* Barra superior */
+.icon-btn { border: 0 !important; background: var(--surface); border-radius: 50%; width: 44px; height: 44px; }
+.icon-btn:hover { color: var(--text) !important; background: var(--tile); }
+.icon-btn.on { background: var(--ink) !important; color: var(--on-ink) !important; }
+.seg { background: var(--surface); border-radius: 999px; padding: 3px; }
+.seg .icon-btn { width: 38px; height: 38px; }
+.seg .icon-btn.on { background: var(--ink) !important; color: var(--on-ink) !important; }
+.run-chip { background: var(--surface); border-radius: 999px; min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; }
+.run-chip i { background: var(--series-1); }
+.run-chip.bad i { background: var(--warning); }
+
+/* ---------- Estructura: barra lateral en PC, barra de arriba en móvil ---------- */
+.shell { display: flex; align-items: flex-start; min-height: 100vh; }
+.shell > main { flex: 1 1 auto; min-width: 0; max-width: 1180px; padding: 20px 32px 64px; }
+.side-nav { display: none; }
+@media (min-width: 1024px) {
+  .side-nav {
+    display: flex; flex-direction: column; gap: 28px; position: sticky; top: 0;
+    flex: 0 0 248px; height: 100vh; padding: 28px 18px; box-sizing: border-box;
+  }
+  .shell header.top { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+}
+@media (max-width: 1023px) { .shell > main { padding: 16px 16px 64px; } }
+.sn-logo { display: flex; align-items: center; gap: 10px; padding: 0 8px; font-weight: 700; font-size: 19px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; }
+.sn-logo b { width: 36px; height: 36px; border-radius: 11px; background: var(--ink); color: var(--on-ink); display: flex; align-items: center; justify-content: center; }
+.sn-links { display: flex; flex-direction: column; gap: 4px; }
+.sn-links a {
+  display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 14px; border-radius: 12px;
+  color: var(--text-2); text-decoration: none; font-weight: 500; font-size: 15px;
+}
+.sn-links a:hover { background: var(--surface); color: var(--text); }
+.sn-links a[aria-current="page"] { background: var(--ink); color: var(--on-ink); font-weight: 600; }
+.sn-links svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
+/* ---------- Cabecera del panel ---------- */
+.saludo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.saludo small { font-size: 14px; color: var(--muted); }
+.saludo h1 { margin: 0; font-size: clamp(22px, 3vw, 30px) !important; font-weight: 600; letter-spacing: -0.02em; }
+
+/* Franja de estado: una línea, el color solo en la palabra clave */
+.estado { display: flex; align-items: flex-start; gap: 10px; background: var(--surface); border-radius: 14px; padding: 12px 16px; font-size: 14px; margin-bottom: 16px; }
+.estado svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 3px; }
+.estado .ok { color: var(--good); }
+.estado .alerta { color: var(--critical); }
+.estado details { margin-top: 6px; }
+.estado summary { cursor: pointer; color: var(--text-2); font-weight: 500; min-height: 32px; display: inline-flex; align-items: center; }
+.estado ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-2); line-height: 1.5; }
+
+/* ---------- Bloque principal ---------- */
+.v-fila { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+.v-card { background: var(--surface); border-radius: 24px; padding: 20px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
+.v-card h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.v-card .v-sub { font-size: 13px; color: var(--muted); }
+.v-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.v-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.v-pill { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--chip-green); color: var(--pill-ok); white-space: nowrap; }
+.v-pill.alerta { background: var(--chip-orange); color: var(--pill-alerta); }
+.v-pill.neutro { background: var(--tile); color: var(--text-2); }
+.v-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-self: stretch; }
+.v-tiles.dos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.v-tile { background: var(--tile); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.v-tile span { font-size: 12px; color: var(--muted); }
+.v-tile b { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Medidor de 270° (elemento firma) */
+.medidor { position: relative; width: 240px; height: 240px; border-radius: 50%; margin: 0 auto; }
+.medidor-in { position: absolute; inset: 18px; border-radius: 50%; background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; }
+.medidor-in span { font-size: 13px; color: var(--muted); }
+.medidor-in b { font-size: 58px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+
+/* Factura estimada + accesos */
+.v-factura { padding: 10px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; }
+.v-factura-monto { flex: 1 1 220px; background: var(--tile); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.v-factura-monto span { font-size: 13px; color: var(--muted); }
+.v-factura-monto b { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.v-factura-monto small { font-size: 13px; color: var(--text-2); }
+.v-accesos { display: flex; gap: 6px; padding: 0 6px; }
+.v-accesos a { width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--text); font-size: 12px; font-weight: 500; }
+.v-accesos a i { width: 44px; height: 44px; border-radius: 50%; background: var(--tile); display: flex; align-items: center; justify-content: center; }
+.v-accesos a:first-child i { background: var(--ink); color: var(--on-ink); }
+.v-accesos svg { width: 18px; height: 18px; }
+.v-desglose { flex: 1 1 100%; margin: 0; padding: 4px 10px 6px; display: grid; gap: 2px; font-size: 12.5px; color: var(--muted); }
+.v-desglose div { display: flex; justify-content: space-between; gap: 10px; }
+.v-desglose dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+/* Barra de la meta */
+.v-big { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.v-barra { height: 52px; border-radius: 14px; background: var(--track); overflow: hidden; }
+.v-barra > div { height: 100%; min-width: 0; border-radius: 14px; background: var(--series-1); color: #0B2414; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.v-barra.alerta > div { background: var(--critical); color: #FFFFFF; }
+.v-barra-txt { font-size: 13px; color: var(--text-2); }
+
+/* Últimos 7 días */
+.v-semana { margin: 0; display: flex; align-items: flex-end; gap: 12px; height: 190px; }
+.v-semana > div { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; }
+.v-semana b { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.v-semana i { display: block; width: 100%; max-width: 52px; border-radius: 10px; background: var(--bar); }
+.v-semana i.pico { background: var(--warning); }
+.v-semana i.ultimo { background: var(--series-1); }
+.v-semana span { font-size: 13px; color: var(--muted); }
+.v-link { font-size: 14px; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--text); }
+.wz-next { display: inline-flex !important; align-items: center !important; justify-content: center; padding-top: 0 !important; padding-bottom: 0 !important; line-height: 1.2; }
+a { color: var(--text); }
+a:hover { color: var(--good); }
+.day-card, .day-card.crit, .day-card.warn { background: var(--tile) !important; border: 0 !important; border-radius: 16px; }
+.day-card:hover { border: 0 !important; opacity: .9; }
+.legend span { background: var(--tile); border-radius: 999px; }
+
+/* Móvil: el saludo arriba a todo lo ancho, los iconos debajo; las baldosas
+   se quedan en 3 columnas (más compactas) para no dejar una suelta. */
+@media (max-width: 700px) {
+  .shell header.top { flex-direction: column; align-items: stretch; }
+  .saludo { width: 100%; }
+  .v-tile { padding: 9px 10px; }
+  .v-tile b { font-size: 15px; }
+  .v-tile span { font-size: 11.5px; }
+  .medidor { width: 220px; height: 220px; }
+  .medidor-in b { font-size: 52px; }
+}

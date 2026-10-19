@@ -59,7 +59,7 @@ export function DailyChart({ data, avg, permitido }: { data: { day: string; kwh:
           )}
           <Bar dataKey="kwh" radius={[4, 4, 0, 0]} isAnimationActive={false}>
             {data.map((d) => (
-              <Cell key={d.day} fill={d.kwh >= avg * 1.5 ? 'var(--critical)' : d.kwh >= avg * 1.2 ? 'var(--warning)' : 'var(--series-1)'} />
+              <Cell key={d.day} fill={d.kwh >= avg * 1.5 ? 'var(--critical)' : d.kwh >= avg * 1.2 ? 'var(--warning)' : 'var(--bar)'} />
             ))}
           </Bar>
         </BarChart>
@@ -85,6 +85,7 @@ export function BudgetChart({ data, threshold }: { data: BudgetRow[]; threshold:
   const proyFinal = data[data.length - 1]?.proy;
   const overBudget = last && last.acum != null && last.acum > last.plan;
   return (
+    <>
     <div className="chart-box" style={{ width: '100%', height: 'clamp(210px, 36vw, 280px)' }}>
       <ResponsiveContainer>
         <ComposedChart data={data} margin={{ top: 14, right: 14, left: -12, bottom: 0 }}>
@@ -110,18 +111,19 @@ export function BudgetChart({ data, threshold }: { data: BudgetRow[]; threshold:
               )}
             />}
           />
-          <ReferenceLine y={threshold} stroke="var(--critical)" strokeDasharray="4 4" label={{ value: `límite ${threshold}`, position: 'insideTopLeft', fontSize: 10.5, fill: 'var(--critical)' }} />
+          <ReferenceLine y={threshold} stroke="var(--muted)" strokeDasharray="5 4" strokeWidth={1.5} label={{ value: `Meta ${threshold}`, position: 'insideTopRight', fontSize: 11, fontWeight: 600, fill: 'var(--text-2)' }} />
           <Line type="monotone" dataKey="plan" name="ritmo ideal" stroke="var(--muted)" strokeDasharray="5 4" strokeWidth={2} dot={false} isAnimationActive={false} />
           <Line type="monotone" dataKey="proy" name="proyección" stroke={proyFinal != null && proyFinal >= threshold ? 'var(--critical)' : 'var(--warning)'} strokeDasharray="3 4" strokeWidth={2} dot={false} isAnimationActive={false} />
           <Area type="monotone" dataKey="acum" name="consumo real" stroke={overBudget ? 'var(--warning)' : 'var(--series-1)'} strokeWidth={3} fill="url(#acumFill)" dot={false} isAnimationActive={false} connectNulls={false} />
         </ComposedChart>
       </ResponsiveContainer>
+    </div>
       <div className="legend">
         <span><i style={{ background: overBudget ? 'var(--warning)' : 'var(--series-1)' }} /> consumo real acumulado</span>
         <span><i className="dash" style={{ borderColor: 'var(--muted)' }} /> ritmo ideal para no pasar el límite</span>
         <span><i className="dash" style={{ borderColor: proyFinal != null && proyFinal >= threshold ? 'var(--critical)' : 'var(--warning)' }} /> proyección al cierre</span>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -136,10 +138,10 @@ export function MonthlyChart({ data, threshold }: { data: { month: string; kwh: 
           <XAxis dataKey="month" tickFormatter={fmtMonth} tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={16} />
           <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} width={38} />
           <Tooltip cursor={{ fill: 'var(--grid)' }} content={<TooltipBox title={(p: any) => fmtMonth(p.month)} unit="kWh" />} />
-          <ReferenceLine y={threshold} stroke="var(--critical)" strokeDasharray="4 4" label={{ value: `límite ${threshold}`, position: 'insideTopLeft', fontSize: 10.5, fill: 'var(--critical)' }} />
+          <ReferenceLine y={threshold} stroke="var(--muted)" strokeDasharray="5 4" strokeWidth={1.5} label={{ value: `Meta ${threshold}`, position: 'insideTopRight', fontSize: 11, fontWeight: 600, fill: 'var(--text-2)' }} />
           <Bar dataKey="kwh" radius={[4, 4, 0, 0]} isAnimationActive={false}>
             {rows.map((d) => (
-              <Cell key={d.month} fill={d.kwh >= threshold ? 'var(--critical)' : 'var(--series-1)'} fillOpacity={d.source === 'invoice' ? 1 : 0.55} />
+              <Cell key={d.month} fill={d.kwh >= threshold ? 'var(--warning)' : 'var(--bar)'} fillOpacity={d.source === 'invoice' ? 1 : 0.55} />
             ))}
           </Bar>
         </BarChart>

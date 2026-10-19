@@ -9,6 +9,7 @@ import { botUsername } from '@/lib/telegram';
 import { EnlaceCopiable } from '../config/copiar';
 import { ContratoForm } from './contrato-form';
 import { TopBar } from '@/components/TopBar';
+import { SideNav } from '@/components/SideNav';
 import { tgLoginActivo } from '@/lib/tg-login';
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,8 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
   const puedeEditar = !!contrato && (sesion?.uid === 'maestro' ? contrato.owner_id === null : contrato.owner_id === sesion?.uid);
 
   return (
+    <div className="shell">
+      <SideNav actual="cuenta" admin={!!sesion?.admin} />
     <main>
       <header className="top">
         <h1><span className="brand-dot">⚡</span> Mi cuenta de luz</h1>
@@ -185,5 +188,6 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
         </section>
       )}
     </main>
+    </div>
   );
 }

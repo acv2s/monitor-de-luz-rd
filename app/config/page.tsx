@@ -1,6 +1,7 @@
 import { ensureSchema } from '@/lib/db';
 import { SettingsForm } from './settings-form';
 import { TopBar } from '@/components/TopBar';
+import { SideNav } from '@/components/SideNav';
 import { TelegramCard } from './telegram-card';
 import { PersonasCard } from './personas-card';
 import { urlDeLaApp } from '@/lib/appurl';
@@ -22,6 +23,8 @@ export default async function ConfigPage({ searchParams }: { searchParams: Promi
   }
 
   return (
+    <div className="shell">
+      <SideNav actual="config" admin={true} />
     <main>
       <header className="top">
         <div>
@@ -85,5 +88,6 @@ export default async function ConfigPage({ searchParams }: { searchParams: Promi
       <PersonasCard appUrl={appUrl} error={q.e} nuevo={q.nuevo} />
 
     </main>
+    </div>
   );
 }

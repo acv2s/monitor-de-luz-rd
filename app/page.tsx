@@ -1,11 +1,10 @@
 import { sql, ensureSchema } from '@/lib/db';
 import { fmtRD, fmtDate, monthLabel, cuadraConLosDias } from '@/lib/analysis';
 import { DailyChart, MonthlyChart, BudgetChart, type BudgetRow } from '@/components/Charts';
-import { Gauge, Chip, House } from '@/components/Ui';
+import { Chip } from '@/components/Ui';
 import { TopBar } from '@/components/TopBar';
 import { DayCards } from '@/components/DayCards';
 import { MonthHistory } from '@/components/MonthHistory';
-import { InfoDot } from '@/components/InfoDot';
 import { buildConsejo } from '@/lib/coach';
 import { getMeta } from '@/lib/goal';
 import { cookies } from 'next/headers';
@@ -14,7 +13,8 @@ import { leerCookie, COOKIE } from '@/lib/session';
 import { contratoDeUsuario, contratosDeUsuario } from '@/lib/contracts';
 import { CuentasSwitch } from '@/components/CuentasSwitch';
 import { getPricing, estimateCost } from '@/lib/pricing';
-import { desgloseDe } from '@/lib/tarifa';
+import { desgloseDe, precioSiguienteKwh } from '@/lib/tarifa';
+import { SideNav } from '@/components/SideNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -221,12 +221,41 @@ export default async function Page() {
   const hoyISO = new Date().toISOString().slice(0, 10);
   const cicloVencido = !!cierreEstimado && hoyISO >= cierreEstimado && daily.length > 1;
 
+  // ---- Datos del bloque principal ----
+  const ultimoDia = dias[dias.length - 1] ?? null;
+  const penultimo = dias[dias.length - 2] ?? null;
+  const vsAnterior = ultimoDia && penultimo && penultimo.kwh > 0
+    ? `${ultimoDia.kwh >= penultimo.kwh ? '+' : ''}${Math.round((ultimoDia.kwh / penultimo.kwh - 1) * 100)}%` : '—';
+  const topeDia = permitido > 0 ? permitido : THRESHOLD / 30;
+  const precioProximo = pricing ? (pricing.tarifa ? precioSiguienteKwh(consumo, pricing.tarifa) : pricing.precioKwh) : null;
+  const costoUltimo = ultimoDia && precioProximo != null ? ultimoDia.kwh * precioProximo : null;
+  const arco = ultimoDia ? Math.min(1, ultimoDia.kwh / topeDia) * 270 : 0;
+  const colorMedidor = ultimoDia && ultimoDia.kwh > topeDia ? 'var(--warning)' : 'var(--series-1)';
+  const picoCiclo = dias.length ? dias.reduce((a, b) => (b.kwh > a.kwh ? b : a)) : null;
+  const DIA_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const ult7 = dias.slice(-7);
+  const maxSemana = Math.max(1, ...ult7.map((d) => d.kwh));
+  const semana = ult7.map((d, i) => ({
+    ...d,
+    alto: Math.max(6, Math.round((d.kwh / maxSemana) * 130)),
+    etiqueta: DIA_CORTO[new Date(d.day + 'T00:00:00Z').getUTCDay()],
+    clase: avg > 0 && d.kwh >= avg * 1.2 ? 'pico' : i === ult7.length - 1 ? 'ultimo' : '',
+  }));
+  const horaRD = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Santo_Domingo', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
+  const saludo = horaRD < 12 ? 'Buenos días' : horaRD < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const hoyLargo = new Date().toLocaleDateString('es-DO', { timeZone: 'America/Santo_Domingo', weekday: 'long', day: 'numeric', month: 'long' });
+
   const consejo = snap ? buildConsejo({ threshold: THRESHOLD, metaRd: meta.rd, consumo, proy, avg, permitido, restantes, dias, pricing }) : null;
 
   return (
+    <div className="shell">
+      <SideNav actual="panel" admin={esAdmin} />
     <main>
       <header className="top">
-        <h1><span className="brand-dot"><Chip icon="bolt" tone="blue" /></span>Monitor de Luz</h1>
+        <div className="saludo">
+          <small>{hoyLargo.charAt(0).toUpperCase() + hoyLargo.slice(1)}{contrato?.nombre ? ` · ${contrato.nombre}` : ''}{snap?.nic ? ` · NIC ${snap.nic}` : ''}</small>
+          <h1>{saludo}</h1>
+        </div>
         <TopBar
           admin={esAdmin}
           status={lastRun ? {
@@ -279,96 +308,126 @@ export default async function Page() {
             </section>
           )}
 
+          {/* Franja de estado: una línea con la palabra clave en color; el
+              consejo completo queda a un toque, sin ocupar media pantalla. */}
           {consejo && (
-            <section className={`coach ${consejo.nivel}`}>
-              <div className="coach-head">
-                <span className="coach-icon">{consejo.nivel === 'alerta' ? '🚨' : consejo.nivel === 'ojo' ? '👀' : '👊'}</span>
-                <h2>{consejo.titulo}</h2>
-              </div>
-              <p className="coach-msg" dangerouslySetInnerHTML={{ __html: consejo.mensaje }} />
-              <ul className="coach-do">
-                {consejo.acciones.map((a, i) => <li key={i} dangerouslySetInnerHTML={{ __html: a }} />)}
-              </ul>
-            </section>
-          )}
-
-          {pricing && (
-            <div className="hero money-hero">
-              <InfoDot>
-                {pricing.tarifa?.estimada
-                  ? `Aproximado con la tarifa de referencia, porque todavía no hemos leído tus facturas. En cuanto se lean, los montos pasan a ser los tuyos. Pasando de ${THRESHOLD} kWh se pierden los tramos baratos y todo el mes sube.`
-                  : `Calculado con los tramos de tus últimas ${pricing.muestras} facturas: ${fmtRD(pricing.precioKwh)} por kWh de promedio, y ${fmtRD(pricing.tarifa?.precioMarginal ?? pricing.precioKwh)} cada kWh adicional. Pasando de ${THRESHOLD} kWh se pierden los tramos baratos y todo el mes se cobra caro.`}
-              </InfoDot>
-              <House />
-              <div className="money-body">
-                <div className="l">
-                  Llevas gastado este ciclo
-                  {pricing.tarifa?.estimada && <span className="money-aprox"> · aproximado</span>}
-                </div>
-                <div className="big-money">{fmtRD(estimateCost(consumo, pricing))}</div>
-                <div className="money-proj">
-                  {dias.length ? (
-                    <>
-                      Al cierre: <b>{fmtRD(estimateCost(proy, pricing))}</b>
-                      {meta.rd ? <span className="money-goal"> · meta {fmtRD(meta.rd)}</span> : null}
-                    </>
-                  ) : (
-                    <>Solo el cargo fijo: el ciclo acaba de arrancar y aún no hay días publicados.</>
-                  )}
-                </div>
-                {/* De dónde sale el número grande: las mismas líneas de la factura,
-                    en pequeño, para que se vea que va sumando de verdad. */}
-                {pricing.tarifa && (
-                  <dl className="money-desglose">
-                    {desgloseDe(consumo, pricing.tarifa).map((l) => (
-                      <div key={l.etiqueta}>
-                        <dt>{l.etiqueta}</dt>
-                        <dd>{fmtRD(l.importe)}</dd>
-                      </div>
-                    ))}
-                  </dl>
+            <div className="estado" role="status">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg>
+              <div>
+                <span>Tu consumo va <strong className={proy >= THRESHOLD ? 'alerta' : 'ok'}>{proy >= THRESHOLD ? 'camino a pasar la meta' : 'dentro de la meta'}</strong>. </span>
+                <span dangerouslySetInnerHTML={{ __html: consejo.mensaje }} />
+                {consejo.acciones.length > 0 && (
+                  <details>
+                    <summary>Qué hacer</summary>
+                    <ul>{consejo.acciones.map((a, i) => <li key={i} dangerouslySetInnerHTML={{ __html: a }} />)}</ul>
+                  </details>
                 )}
               </div>
             </div>
           )}
 
-          <div className="hero">
-            <Gauge
-              value={consumo}
-              max={THRESHOLD}
-              label={`día ${diasTranscurridos} · ${pct}% del límite`}
-              color={level === 'crit' ? 'var(--critical)' : level === 'warn' ? 'var(--warning)' : 'var(--series-1)'}
-            />
-            <div className="stats">
-              <div className="stat">
-                <Chip icon="trend" tone={proy >= THRESHOLD ? 'red' : proy >= THRESHOLD * 0.9 ? 'orange' : 'green'} />
+          <div className="v-fila">
+            {/* Medidor del último día publicado (la distribuidora va ~2 días atrás). */}
+            <article className="v-card" style={{ flex: '1 1 320px', alignItems: 'center' }}>
+              <div className="v-head" style={{ alignSelf: 'stretch' }}>
                 <div>
-                  <div className="v">{proy} kWh</div>
-                  <div className="l">Proyección · {proy >= THRESHOLD ? `se pasa por ${proy - THRESHOLD}` : `margen de ${THRESHOLD - proy}`}</div>
+                  <h2>Último día publicado</h2>
+                  <span className="v-sub">{ultimoDia ? fmtDate(ultimoDia.day) : 'Aún sin días'}</span>
+                </div>
+                {ultimoDia && costoUltimo != null && <span className={`v-pill ${ultimoDia.kwh > topeDia ? 'alerta' : ''}`}>≈ {fmtRD(costoUltimo)}</span>}
+              </div>
+              <div className="medidor" role="img"
+                aria-label={ultimoDia ? `${ultimoDia.kwh} de ${topeDia.toFixed(1)} kWh diarios` : 'Sin datos'}
+                style={{ background: `conic-gradient(from 225deg, ${colorMedidor} 0deg ${arco}deg, var(--track) ${arco}deg 270deg, transparent 270deg 360deg)` }}>
+                <div className="medidor-in">
+                  <span>Consumo del día</span>
+                  <b>{ultimoDia ? ultimoDia.kwh.toFixed(1) : '—'}</b>
+                  <span>de {topeDia.toFixed(1)} kWh diarios</span>
                 </div>
               </div>
-              <div className="stat">
-                <Chip icon="bolt" tone="blue" />
-                <div>
-                  <div className="v">{avg.toFixed(1)} kWh/día</div>
-                  <div className="l">Promedio del ciclo</div>
-                </div>
+              <div className="v-tiles">
+                <div className="v-tile"><span>Vs. día anterior</span><b>{vsAnterior}</b></div>
+                <div className="v-tile"><span>Promedio</span><b>{avg.toFixed(1)} kWh</b></div>
+                <div className="v-tile"><span>Día más alto</span><b>{picoCiclo ? `${picoCiclo.kwh} kWh` : '—'}</b></div>
               </div>
-              <div className="stat">
-                <Chip icon="target" tone={permitido > 0 && avg > permitido ? 'orange' : 'green'} />
-                <div>
-                  <div className="v">{permitido.toFixed(1)} kWh/día</div>
-                  <div className="l">Meta diaria · faltan {restantes} días</div>
+            </article>
+
+            <div className="v-col" style={{ flex: '1.4 1 420px' }}>
+              {/* Lo que la página oficial no da: la factura en pesos. */}
+              <article className="v-card v-factura">
+                <div className="v-factura-monto">
+                  <span>Factura estimada al cierre{cierreEstimado ? ` · ~${fmtDate(cierreEstimado)}` : ''}{pricing?.tarifa?.estimada ? ' · aproximada' : ''}</span>
+                  <b>{pricing && dias.length ? fmtRD(estimateCost(proy, pricing)) : '—'}</b>
+                  {pricing && <small>Llevas {fmtRD(estimateCost(consumo, pricing))} este ciclo{meta.rd ? ` · meta ${fmtRD(meta.rd)}` : ''}</small>}
                 </div>
-              </div>
-              <div className="stat">
-                <Chip icon="peak" tone="red" />
-                <div>
-                  <div className="v">{snap.valor_mayor ?? '—'} kWh</div>
-                  <div className="l">Día más alto{snap.dia_mayor ? ` · ${fmtDate(snap.dia_mayor)}` : ''}</div>
+                <nav className="v-accesos" aria-label="Accesos">
+                  <a href="#facturas"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6" /><path d="M9 12h6" /></svg></i>Facturas</a>
+                  <a href="/mi-cuenta"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></i>Meta</a>
+                  <a href="#historial"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v4h4" /><path d="M12 8v4l3 2" /></svg></i>Historial</a>
+                </nav>
+                {/* De dónde sale el monto: las mismas líneas de la factura, discretas. */}
+                {pricing?.tarifa && dias.length > 0 && (
+                  <dl className="v-desglose" aria-label="Desglose de lo que llevas">
+                    {desgloseDe(consumo, pricing.tarifa).map((l) => (
+                      <div key={l.etiqueta}><dt>{l.etiqueta}</dt><dd>{fmtRD(l.importe)}</dd></div>
+                    ))}
+                  </dl>
+                )}
+              </article>
+
+              <article className="v-card">
+                <div className="v-head">
+                  <div>
+                    <h2>Meta del ciclo</h2>
+                    <span className="v-sub">Día {diasTranscurridos} de ~{duracionCiclo} · {consumo} de {THRESHOLD} kWh</span>
+                  </div>
+                  <span className="v-big">{pct}%</span>
                 </div>
-              </div>
+                <div className={`v-barra ${consumo >= THRESHOLD ? 'alerta' : ''}`} role="img" aria-label={`${pct}% de la meta usada`}>
+                  <div style={{ width: `${Math.max(pct, 0)}%` }}>{pct >= 28 ? (consumo >= THRESHOLD ? `Pasaste por ${consumo - THRESHOLD} kWh` : `Quedan ${THRESHOLD - consumo} kWh`) : ''}</div>
+                </div>
+                {pct < 28 && <span className="v-barra-txt">Quedan {THRESHOLD - consumo} kWh</span>}
+                <div className="v-tiles">
+                  <div className="v-tile"><span>Proyección</span><b style={{ color: proy >= THRESHOLD ? 'var(--critical)' : undefined }}>{proy} kWh</b></div>
+                  <div className="v-tile"><span>Tope diario</span><b>{permitido.toFixed(1)} kWh</b></div>
+                  <div className="v-tile"><span>Próximo kWh</span><b>{precioProximo != null ? fmtRD(precioProximo) : '—'}</b></div>
+                </div>
+              </article>
             </div>
+          </div>
+
+          <div className="v-fila">
+            <article className="v-card" style={{ flex: '2 1 460px' }}>
+              <div className="v-head" style={{ alignItems: 'center' }}>
+                <h2>Últimos 7 días publicados</h2>
+                <a className="v-link" href="#historial">Ver historial
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                </a>
+              </div>
+              {semana.length ? (
+                <figure className="v-semana" role="img" aria-label="Consumo diario de los últimos días publicados">
+                  {semana.map((d) => (
+                    <div key={d.day}>
+                      <b>{d.kwh.toFixed(1)}</b>
+                      <i className={d.clase} style={{ height: `${d.alto}px` }} />
+                      <span>{d.etiqueta}</span>
+                    </div>
+                  ))}
+                </figure>
+              ) : <div className="empty">Todavía no hay días publicados en este ciclo.</div>}
+            </article>
+
+            <article className="v-card" style={{ flex: '1 1 280px', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <h2>Próxima factura</h2>
+                <div className="v-tiles dos">
+                  <div className="v-tile"><span>Corte estimado</span><b>{cierreEstimado ? fmtDate(cierreEstimado) : '—'}</b></div>
+                  <div className="v-tile"><span>Faltan</span><b>~{restantes} días</b></div>
+                </div>
+                <span className="v-sub" style={{ lineHeight: 1.45 }}>Monto estimado según tu proyección del ciclo. La distribuidora emite la factura unos días después del corte.</span>
+              </div>
+              <a className="wz-next" href="#facturas">Ver facturas anteriores</a>
+            </article>
           </div>
 
           <section className="card">
@@ -404,7 +463,7 @@ export default async function Page() {
         </>
       )}
 
-      <section className="card">
+      <section className="card" id="historial">
         <h2><Chip icon="calendar" tone="blue" /> Tu historial mes a mes</h2>
         <p className="desc">Sólido: facturas leídas. Claro: histórico de la factura.</p>
         {monthly.length > 0 && (() => {
@@ -425,7 +484,7 @@ export default async function Page() {
         <MonthHistory meses={historial} threshold={THRESHOLD} precioKwh={pricing?.precioKwh ?? null} />
       </section>
 
-      <section className="card">
+      <section className="card" id="facturas">
         <h2><Chip icon="bill" tone="green" /> Facturas</h2>
         <p className="desc">Toca «¿Por qué este mes?» para ver el análisis.</p>
         {!invoices.length ? <div className="empty">Sin facturas todavía.</div> : (
@@ -525,5 +584,6 @@ export default async function Page() {
         </details>
       )}
     </main>
+    </div>
   );
 }
