@@ -1,6 +1,5 @@
 import { ensureSchema } from '@/lib/db';
 import { SettingsForm } from './settings-form';
-import { TopBar } from '@/components/TopBar';
 import { SideNav } from '@/components/SideNav';
 import { TelegramCard } from './telegram-card';
 import { PersonasCard } from './personas-card';
@@ -31,7 +30,6 @@ export default async function ConfigPage({ searchParams }: { searchParams: Promi
           <h1>Configuración</h1>
           <div className="sub">Todo se edita aquí, sin volver a desplegar</div>
         </div>
-        <TopBar admin actual="config" />
       </header>
 
       {dbError && (

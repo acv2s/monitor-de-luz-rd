@@ -8,7 +8,7 @@ import { codigoDeEnlace } from '@/lib/telegram-link';
 import { botUsername } from '@/lib/telegram';
 import { EnlaceCopiable } from '../config/copiar';
 import { ContratoForm } from './contrato-form';
-import { TopBar } from '@/components/TopBar';
+import { Ajustes } from '@/components/Ajustes';
 import { SideNav } from '@/components/SideNav';
 import { tgLoginActivo } from '@/lib/tg-login';
 
@@ -59,7 +59,6 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
     <main>
       <header className="top">
         <h1><span className="brand-dot">⚡</span> Mi cuenta de luz</h1>
-        <TopBar admin={!!sesion?.admin} actual="cuenta" />
       </header>
 
       <CuentasSwitch cuentas={cuentas} activa={contrato?.id ?? null} volver="/mi-cuenta" conNueva={!!sesion} />
@@ -187,6 +186,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
           </div>
         </section>
       )}
+      <Ajustes />
     </main>
     </div>
   );

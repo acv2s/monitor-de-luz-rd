@@ -2,7 +2,6 @@ import { sql, ensureSchema } from '@/lib/db';
 import { fmtRD, fmtDate, monthLabel, cuadraConLosDias } from '@/lib/analysis';
 import { DailyChart, MonthlyChart, BudgetChart, type BudgetRow } from '@/components/Charts';
 import { Chip } from '@/components/Ui';
-import { TopBar } from '@/components/TopBar';
 import { DayCards } from '@/components/DayCards';
 import { MonthHistory } from '@/components/MonthHistory';
 import { buildConsejo } from '@/lib/coach';
@@ -221,6 +220,23 @@ export default async function Page() {
   const hoyISO = new Date().toISOString().slice(0, 10);
   const cicloVencido = !!cierreEstimado && hoyISO >= cierreEstimado && daily.length > 1;
 
+  // ---- Tarjeta del dinero y día a día (diseño de app) ----
+  const llevasRD = pricing ? estimateCost(consumo, pricing) : 0;
+  const proyRD = pricing ? estimateCost(proy, pricing) : 0;
+  const metaRD = meta.rd ? Number(meta.rd) : pricing ? estimateCost(THRESHOLD, pricing) : 0;
+  const pctDinero = metaRD > 0 ? Math.round((llevasRD / metaRD) * 100) : 0;
+  const proyPctDinero = metaRD > 0 ? Math.min(100, Math.round((proyRD / metaRD) * 100)) : 0;
+  const vaAPasar = proy >= THRESHOLD || (metaRD > 0 && proyRD > metaRD);
+  const margenRD = metaRD - (dias.length ? proyRD : llevasRD);
+  const promRD = dias.length ? llevasRD / dias.length : 0;
+  const MESES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const DIA_CORTO_M = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const fechaCorta = (iso: string) => { const d = new Date(iso + 'T00:00:00Z'); return `${DIA_CORTO_M[d.getUTCDay()]} ${d.getUTCDate()} ${MESES_LARGO[d.getUTCMonth()].slice(0, 3)}`; };
+  const dm = (iso: string | null | undefined) => { if (!iso) return ''; const d = new Date(iso + 'T00:00:00Z'); return `${d.getUTCDate()} ${MESES_LARGO[d.getUTCMonth()].slice(0, 3)}`; };
+  const datosAl = snap?.datos_hasta ? fechaCorta(snap.datos_hasta) : null;
+  const atrasoN = snap?.datos_hasta ? Math.max(0, Math.round((Date.parse(new Date().toISOString().slice(0, 10)) - Date.parse(snap.datos_hasta)) / 86400000) - 1) : 0;
+  const atrasoTxt = atrasoN > 0 ? ` · ${atrasoN} ${atrasoN === 1 ? 'día' : 'días'} sin publicar` : '';
+  const tituloCiclo = snap?.cycle_start ? `Ciclo de ${MESES_LARGO[new Date(snap.cycle_start + 'T00:00:00Z').getUTCMonth()]}` : 'Tu ciclo';
   // ---- Datos del bloque principal ----
   const ultimoDia = dias[dias.length - 1] ?? null;
   const penultimo = dias[dias.length - 2] ?? null;
@@ -247,24 +263,41 @@ export default async function Page() {
 
   const consejo = snap ? buildConsejo({ threshold: THRESHOLD, metaRd: meta.rd, consumo, proy, avg, permitido, restantes, dias, pricing }) : null;
 
+  const ritmoMeta = THRESHOLD / Math.max(1, duracionCiclo);
+  const kwhPorDia = new Map(daily.map((d) => [d.day, d.kwh]));
+  const hoyISO2 = new Date().toISOString().slice(0, 10);
+  const topeBarras = Math.max(ritmoMeta * 1.25, ...daily.map((d) => d.kwh), 1);
+  let pendientes = 0;
+  const barrasCiclo: { key: string; et: string; alto: number; clase: string; titulo: string }[] = [];
+  if (snap?.cycle_start) {
+    const ini = Date.parse(snap.cycle_start + 'T00:00:00Z');
+    for (let i = 0; i < duracionCiclo; i++) {
+      const iso = new Date(ini + i * 86400000).toISOString().slice(0, 10);
+      const k = kwhPorDia.get(iso);
+      const et = i === 0 || (i + 1) % 5 === 0 || i === duracionCiclo - 1 ? String(new Date(ini + i * 86400000).getUTCDate()) : '';
+      if (k != null && k > 0) {
+        barrasCiclo.push({ key: iso, et, alto: Math.max(6, Math.round((k / topeBarras) * 150)), clase: k > ritmoMeta ? 'alto' : 'ok', titulo: `${fmtDate(iso)}: ${k} kWh` });
+      } else if (iso < hoyISO2) {
+        pendientes++;
+        barrasCiclo.push({ key: iso, et, alto: Math.round(150 * 0.4), clase: 'pend', titulo: `${fmtDate(iso)}: pendiente de publicar` });
+      } else {
+        barrasCiclo.push({ key: iso, et, alto: 8, clase: 'futuro', titulo: fmtDate(iso) });
+      }
+    }
+  }
+
   return (
     <div className="shell">
       <SideNav actual="panel" admin={esAdmin} />
     <main>
-      <header className="top">
+      <header className="top app-head">
         <div className="saludo">
-          <small>{hoyLargo.charAt(0).toUpperCase() + hoyLargo.slice(1)}{contrato?.nombre ? ` · ${contrato.nombre}` : ''}{snap?.nic ? ` · NIC ${snap.nic}` : ''}</small>
-          <h1>{saludo}</h1>
+          <small>
+            {datosAl ? <>Datos al <strong>{datosAl}</strong>{atrasoTxt}</> : (contrato?.nombre ?? 'Tu cuenta')}
+            {snap?.nic ? ` · NIC ${snap.nic}` : ''}
+          </small>
+          <h1>{cierreEstimado ? `Ciclo de ${MESES_LARGO[new Date(cierreEstimado + 'T00:00:00Z').getUTCMonth()]}` : tituloCiclo}</h1>
         </div>
-        <TopBar
-          admin={esAdmin}
-          status={lastRun ? {
-            ok: !!lastRun.ok,
-            when: new Date(lastRun.started_at).toLocaleString('es-DO', {
-              timeZone: 'America/Santo_Domingo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-            }),
-          } : null}
-        />
       </header>
 
       <CuentasSwitch cuentas={cuentas} activa={contrato?.id ?? null} volver="/" />
@@ -308,154 +341,89 @@ export default async function Page() {
             </section>
           )}
 
-          {/* Franja de estado: una línea con la palabra clave en color; el
-              consejo completo queda a un toque, sin ocupar media pantalla. */}
-          {consejo && (
-            <div className="estado" role="status">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg>
-              <div>
-                <span>Tu consumo va <strong className={proy >= THRESHOLD ? 'alerta' : 'ok'}>{proy >= THRESHOLD ? 'camino a pasar la meta' : 'dentro de la meta'}</strong>. </span>
-                <span dangerouslySetInnerHTML={{ __html: consejo.mensaje }} />
-                {consejo.acciones.length > 0 && (
-                  <details>
-                    <summary>Qué hacer</summary>
-                    <ul>{consejo.acciones.map((a, i) => <li key={i} dangerouslySetInnerHTML={{ __html: a }} />)}</ul>
-                  </details>
-                )}
+          {/* La tarjeta que importa: cuánto va la factura. Es lo que la página
+              oficial no dice, así que va arriba, en grande y en pesos. */}
+          <section className="v-fila">
+            <article className="hero-dinero anim" style={{ flex: '2 1 520px' }}>
+              <div className="hd-top">
+                <span>Llevas este ciclo</span>
+                {pricing && <span className={`v-pill ${vaAPasar ? 'alerta' : ''}`}>{vaAPasar ? 'Vas a pasar la meta' : 'Dentro de la meta'}</span>}
               </div>
-            </div>
-          )}
-
-          <div className="v-fila">
-            {/* Medidor del último día publicado (la distribuidora va ~2 días atrás). */}
-            <article className="v-card" style={{ flex: '1 1 320px', alignItems: 'center' }}>
-              <div className="v-head" style={{ alignSelf: 'stretch' }}>
-                <div>
-                  <h2>Último día publicado</h2>
-                  <span className="v-sub">{ultimoDia ? fmtDate(ultimoDia.day) : 'Aún sin días'}</span>
-                </div>
-                {ultimoDia && costoUltimo != null && <span className={`v-pill ${ultimoDia.kwh > topeDia ? 'alerta' : ''}`}>≈ {fmtRD(costoUltimo)}</span>}
+              <div className="hd-monto">
+                <b>{pricing ? fmtRD(llevasRD) : `${consumo} kWh`}</b>
+                <span>= <strong>{consumo} kWh</strong> consumidos{ultimoDia ? ` hasta el ${dm(ultimoDia.day)}` : ''}</span>
               </div>
-              <div className="medidor" role="img"
-                aria-label={ultimoDia ? `${ultimoDia.kwh} de ${topeDia.toFixed(1)} kWh diarios` : 'Sin datos'}
-                style={{ background: `conic-gradient(from 225deg, ${colorMedidor} 0deg ${arco}deg, var(--track) ${arco}deg 270deg, transparent 270deg 360deg)` }}>
-                <div className="medidor-in">
-                  <span>Consumo del día</span>
-                  <b>{ultimoDia ? ultimoDia.kwh.toFixed(1) : '—'}</b>
-                  <span>de {topeDia.toFixed(1)} kWh diarios</span>
-                </div>
-              </div>
-              <div className="v-tiles">
-                <div className="v-tile"><span>Vs. día anterior</span><b>{vsAnterior}</b></div>
-                <div className="v-tile"><span>Promedio</span><b>{avg.toFixed(1)} kWh</b></div>
-                <div className="v-tile"><span>Día más alto</span><b>{picoCiclo ? `${picoCiclo.kwh} kWh` : '—'}</b></div>
-              </div>
-            </article>
-
-            <div className="v-col" style={{ flex: '1.4 1 420px' }}>
-              {/* Lo que la página oficial no da: la factura en pesos. */}
-              <article className="v-card v-factura">
-                <div className="v-factura-monto">
-                  <span>Factura estimada al cierre{cierreEstimado ? ` · ~${fmtDate(cierreEstimado)}` : ''}{pricing?.tarifa?.estimada ? ' · aproximada' : ''}</span>
-                  <b>{pricing && dias.length ? fmtRD(estimateCost(proy, pricing)) : '—'}</b>
-                  {pricing && <small>Llevas {fmtRD(estimateCost(consumo, pricing))} este ciclo{meta.rd ? ` · meta ${fmtRD(meta.rd)}` : ''}</small>}
-                </div>
-                <nav className="v-accesos" aria-label="Accesos">
-                  <a href="#facturas"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6" /><path d="M9 12h6" /></svg></i>Facturas</a>
-                  <a href="/mi-cuenta"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg></i>Meta</a>
-                  <a href="#historial"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v4h4" /><path d="M12 8v4l3 2" /></svg></i>Historial</a>
-                </nav>
-                {/* De dónde sale el monto: las mismas líneas de la factura, discretas. */}
-                {pricing?.tarifa && dias.length > 0 && (
-                  <dl className="v-desglose" aria-label="Desglose de lo que llevas">
-                    {desgloseDe(consumo, pricing.tarifa).map((l) => (
-                      <div key={l.etiqueta}><dt>{l.etiqueta}</dt><dd>{fmtRD(l.importe)}</dd></div>
-                    ))}
-                  </dl>
-                )}
-              </article>
-
-              <article className="v-card">
-                <div className="v-head">
-                  <div>
-                    <h2>Meta del ciclo</h2>
-                    <span className="v-sub">Día {diasTranscurridos} de ~{duracionCiclo} · {consumo} de {THRESHOLD} kWh</span>
+              {pricing && metaRD > 0 && (
+                <div className="hd-barra-wrap">
+                  <div className="hd-barra" role="img" aria-label={`${pctDinero}% de tu meta de ${fmtRD(metaRD)}; la proyección llega al ${proyPctDinero}%`}>
+                    <i className={`hd-proy ${vaAPasar ? 'alerta' : ''}`} style={{ width: `${proyPctDinero}%` }} />
+                    <i className={`hd-real ${vaAPasar ? 'alerta' : ''}`} style={{ width: `${Math.min(100, pctDinero)}%` }} />
                   </div>
-                  <span className="v-big">{pct}%</span>
+                  <div className="hd-leyenda"><span>{pctDinero}% de tu meta · lo más claro es la proyección</span><span>Meta {fmtRD(metaRD)}</span></div>
                 </div>
-                <div className={`v-barra ${consumo >= THRESHOLD ? 'alerta' : ''}`} role="img" aria-label={`${pct}% de la meta usada`}>
-                  <div style={{ width: `${Math.max(pct, 0)}%` }}>{pct >= 28 ? (consumo >= THRESHOLD ? `Pasaste por ${consumo - THRESHOLD} kWh` : `Quedan ${THRESHOLD - consumo} kWh`) : ''}</div>
+              )}
+              {pricing && (
+                <div className="hd-tiles">
+                  <div><span>Proyección al cierre</span><b className={vaAPasar ? 'alerta' : 'ok'}>{dias.length ? fmtRD(proyRD) : '—'}</b><small>≈ {proy} kWh{cierreEstimado ? ` al ${dm(cierreEstimado)}` : ''}</small></div>
+                  <div><span>{margenRD >= 0 ? 'Margen hasta la meta' : 'Te pasarías por'}</span><b>{fmtRD(Math.abs(margenRD))}</b><small>~{restantes} días por delante</small></div>
+                  <div><span>Promedio por día</span><b>{fmtRD(promRD)}</b><small>≈ {avg.toFixed(1)} kWh/día</small></div>
                 </div>
-                {pct < 28 && <span className="v-barra-txt">Quedan {THRESHOLD - consumo} kWh</span>}
-                <div className="v-tiles">
-                  <div className="v-tile"><span>Proyección</span><b style={{ color: proy >= THRESHOLD ? 'var(--critical)' : undefined }}>{proy} kWh</b></div>
-                  <div className="v-tile"><span>Tope diario</span><b>{permitido.toFixed(1)} kWh</b></div>
-                  <div className="v-tile"><span>Próximo kWh</span><b>{precioProximo != null ? fmtRD(precioProximo) : '—'}</b></div>
-                </div>
-              </article>
-            </div>
-          </div>
+              )}
+            </article>
 
-          <div className="v-fila">
-            <article className="v-card" style={{ flex: '2 1 460px' }}>
-              <div className="v-head" style={{ alignItems: 'center' }}>
-                <h2>Últimos 7 días publicados</h2>
-                <a className="v-link" href="#historial">Ver historial
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-                </a>
-              </div>
-              {semana.length ? (
-                <figure className="v-semana" role="img" aria-label="Consumo diario de los últimos días publicados">
-                  {semana.map((d) => (
-                    <div key={d.day}>
-                      <b>{d.kwh.toFixed(1)}</b>
-                      <i className={d.clase} style={{ height: `${d.alto}px` }} />
-                      <span>{d.etiqueta}</span>
-                    </div>
+            {pricing?.tarifa && (
+              <article className="v-card anim" style={{ flex: '1 1 300px', animationDelay: '.08s' }}>
+                <h2>Cómo se calcula</h2>
+                <dl className="calc">
+                  {desgloseDe(consumo, pricing.tarifa).map((l) => (
+                    <div key={l.etiqueta}><dt>{l.etiqueta}</dt><dd>{fmtRD(l.importe)}</dd></div>
                   ))}
-                </figure>
-              ) : <div className="empty">Todavía no hay días publicados en este ciclo.</div>}
-            </article>
-
-            <article className="v-card" style={{ flex: '1 1 280px', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <h2>Próxima factura</h2>
-                <div className="v-tiles dos">
-                  <div className="v-tile"><span>Corte estimado</span><b>{cierreEstimado ? fmtDate(cierreEstimado) : '—'}</b></div>
-                  <div className="v-tile"><span>Faltan</span><b>~{restantes} días</b></div>
-                </div>
-                <span className="v-sub" style={{ lineHeight: 1.45 }}>Monto estimado según tu proyección del ciclo. La distribuidora emite la factura unos días después del corte.</span>
-              </div>
-              <a className="wz-next" href="#facturas">Ver facturas anteriores</a>
-            </article>
-          </div>
-
-          <section className="card">
-            <h2><Chip icon="home" tone="blue" /> Camino a los {THRESHOLD} kWh</h2>
-            <p className="desc">Si tu línea va por encima de la punteada gris, vas muy rápido.</p>
-            <BudgetChart data={budget} threshold={THRESHOLD} />
+                  <div className="calc-total"><dt>Total{ultimoDia ? ` al ${dm(ultimoDia.day)}` : ''}</dt><dd>{fmtRD(llevasRD)}</dd></div>
+                </dl>
+                {precioProximo != null && (
+                  <p className="calc-nota">Ya estás en el tramo de <strong>{fmtRD(precioProximo)}/kWh</strong>: cada kWh que uses de aquí al cierre cuesta eso.</p>
+                )}
+              </article>
+            )}
           </section>
 
-          {daily.length > 0 ? (
-            <section className="card">
-              <h2><Chip icon="bolt" tone="blue" /> Consumo diario del ciclo actual</h2>
-              <p className="desc">Amarillo: día alto. Rojo: día pico.</p>
-              <DailyChart data={daily} avg={avg} permitido={permitido} />
-              {altos.length > 0 && (
-                <>
-                  <h3>Días que dispararon el consumo</h3>
-                  <DayCards dias={altos} avg={avg} precioKwh={pricing?.precioKwh ?? null} />
-                </>
-              )}
-            </section>
-          ) : cicloPasado.length > 0 && (
-            /* El ciclo nuevo todavía no tiene días publicados: en vez de una
-               gráfica vacía, se enseñan los días guardados del ciclo pasado. */
+          {/* Día a día del ciclo: verde con datos, naranja sobre el ritmo,
+              punteado lo que la distribuidora todavía no publica. */}
+          <section className="v-card anim" style={{ animationDelay: '.16s', marginBottom: 16 }}>
+            <div className="v-head" style={{ alignItems: 'center' }}>
+              <h2>Día a día del ciclo (kWh)</h2>
+              <div className="dd-leyenda">
+                <span><i className="ok" />Con datos</span>
+                <span><i className="alto" />Sobre el ritmo</span>
+                <span><i className="pend" />Pendiente de publicar</span>
+                <span>- - - Ritmo para la meta: {ritmoMeta.toFixed(1)}/día</span>
+              </div>
+            </div>
+            <div className="dd-scroll">
+              <figure className="dd-barras" role="img" aria-label={`Consumo diario del ciclo; ${pendientes} días pendientes de publicar`} style={{ ['--ritmo' as any]: `${Math.round((ritmoMeta / topeBarras) * 150)}px` }}>
+                <div className="dd-ritmo" aria-hidden="true" />
+                {barrasCiclo.map((d, i) => (
+                  <div key={d.key} className="dd-col">
+                    <i className={d.clase} style={{ height: `${d.alto}px`, animationDelay: `${0.2 + i * 0.015}s` }} title={d.titulo} />
+                    <span>{d.et}</span>
+                  </div>
+                ))}
+              </figure>
+            </div>
+            {altos.length > 0 && (
+              <>
+                <h3>Días que dispararon el consumo</h3>
+                <DayCards dias={altos} avg={avg} precioKwh={pricing?.precioKwh ?? null} />
+              </>
+            )}
+          </section>
+
+          {daily.length === 0 && cicloPasado.length > 0 && (
             <section className="card">
               <h2><Chip icon="bolt" tone="blue" /> Consumo diario · ciclo pasado</h2>
               <p className="desc">
                 Los últimos días guardados, del ciclo que cerró{snap?.cycle_start ? ` el ${fmtDate(snap.cycle_start)}` : ''}.
-                Cuando la distribuidora publique los días nuevos, esta gráfica pasa al ciclo actual.
+                Cuando la distribuidora publique los días nuevos, esto pasa al ciclo actual.
               </p>
               <DailyChart data={cicloPasado} avg={avgPasado} permitido={0} />
             </section>

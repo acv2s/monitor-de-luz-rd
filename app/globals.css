@@ -969,3 +969,115 @@ a:hover { color: var(--good); }
   .medidor { width: 220px; height: 220px; }
   .medidor-in b { font-size: 52px; }
 }
+
+/* =====================================================================
+   Versión aplicación: más grande, más aire y con movimiento.
+   ===================================================================== */
+body { font-size: 16px; }
+.v-card h2, section.card h2 { font-size: 18px; }
+.v-card { padding: 22px; gap: 16px; }
+section.card { padding: 22px; }
+
+/* Cabecera sin menú arriba: solo de qué datos y qué ciclo se trata */
+header.app-head { position: static; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; margin: 0 0 18px; padding: 8px 0 0; }
+.app-head .saludo small { font-size: 15px; }
+.app-head .saludo strong { color: var(--text); }
+.app-head .saludo h1 { font-size: clamp(28px, 6vw, 34px) !important; }
+.shell header.top:not(.app-head) { position: static; background: none; backdrop-filter: none; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+
+/* ---------- Tarjeta del dinero (oscura, siempre oscura) ---------- */
+.hero-dinero {
+  background: #111312; color: #FFFFFF; border-radius: 26px; padding: 26px; min-width: 0; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 20px;
+}
+:root[data-theme="dark"] .hero-dinero { background: #1D211F; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hero-dinero { background: #1D211F; } }
+.hd-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.hd-top > span:first-child { font-size: 17px; font-weight: 500; color: #C4CAC7; }
+.hd-monto { display: flex; flex-direction: column; gap: 8px; }
+.hd-monto b { font-size: clamp(46px, 9vw, 84px); font-weight: 700; letter-spacing: -0.05em; line-height: 0.95; font-variant-numeric: tabular-nums; }
+.hd-monto span { font-size: clamp(16px, 2.4vw, 20px); color: #C4CAC7; }
+.hd-monto strong { color: #FFFFFF; }
+.hd-barra-wrap { display: flex; flex-direction: column; gap: 8px; }
+.hd-barra { position: relative; height: 18px; border-radius: 999px; background: #2E3230; overflow: hidden; }
+.hd-barra i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; transform-origin: left center; animation: crecer-x .9s cubic-bezier(.2,.8,.2,1) both; }
+.hd-proy { background: #3F6B4E; animation-delay: .25s !important; }
+.hd-proy.alerta { background: #7A3A17; }
+.hd-real { background: #22C55E; animation-delay: .1s !important; }
+.hd-real.alerta { background: #EA580C; }
+.hd-leyenda { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13.5px; color: #C4CAC7; }
+.hd-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px; }
+.hd-tiles > div { background: #2E3230; border-radius: 18px; padding: 15px 17px; display: flex; flex-direction: column; gap: 2px; }
+.hd-tiles span { font-size: 13.5px; color: #C4CAC7; }
+.hd-tiles b { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.hd-tiles b.ok { color: #86EFAC; }
+.hd-tiles b.alerta { color: #FDBA8C; }
+.hd-tiles small { font-size: 13px; color: #C4CAC7; }
+.hero-dinero .v-pill { font-size: 13.5px; padding: 6px 12px; }
+
+/* ---------- Cómo se calcula ---------- */
+.calc { margin: 0; display: flex; flex-direction: column; }
+.calc > div { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 46px; font-size: 16px; border-bottom: 1px solid var(--tile); }
+.calc dt { color: var(--text-2); }
+.calc dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.calc .calc-total { border-bottom: 0; min-height: 54px; font-size: 18px; font-weight: 700; }
+.calc .calc-total dt { color: var(--text); }
+.calc-nota { margin: auto 0 0; padding: 13px 15px; border-radius: 14px; background: var(--tile); font-size: 15px; line-height: 1.45; }
+
+/* ---------- Día a día ---------- */
+.dd-leyenda { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13.5px; color: var(--text-2); }
+.dd-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.dd-leyenda i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.dd-leyenda i.ok { background: var(--series-1); }
+.dd-leyenda i.alto { background: var(--warning); }
+.dd-leyenda i.pend { border: 1.5px dashed var(--muted); }
+.dd-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.dd-barras { margin: 0; min-width: 560px; position: relative; display: flex; align-items: flex-end; gap: 5px; height: 182px; padding-bottom: 22px; box-sizing: border-box; }
+.dd-ritmo { position: absolute; left: 0; right: 0; bottom: calc(22px + var(--ritmo)); border-top: 1.5px dashed var(--muted); }
+.dd-col { flex: 1 1 0; min-width: 0; position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; height: 100%; }
+.dd-col i { display: block; border-radius: 5px; transform-origin: bottom center; animation: crecer-y .7s cubic-bezier(.2,.8,.2,1) both; box-sizing: border-box; }
+.dd-col i.ok { background: var(--series-1); }
+.dd-col i.alto { background: var(--warning); }
+.dd-col i.pend { background: transparent; border: 1.5px dashed var(--muted); }
+.dd-col i.futuro { background: var(--tile); }
+.dd-col span { position: absolute; bottom: -22px; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--muted); }
+
+/* ---------- Barra de pestañas (móvil) ---------- */
+.tab-bar { display: none; }
+@media (max-width: 1023px) {
+  .tab-bar {
+    display: grid; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); background: var(--surface);
+    box-shadow: 0 -1px 0 var(--border);
+  }
+  .tab-bar a {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    min-height: 58px; border-radius: 16px; text-decoration: none; color: var(--muted);
+    font-size: 13px; font-weight: 500; transition: color .2s, background .2s, transform .15s;
+  }
+  .tab-bar a svg { width: 27px; height: 27px; }
+  .tab-bar a[aria-current="page"] { color: var(--text); font-weight: 700; }
+  .tab-bar a[aria-current="page"] svg { fill: currentColor; fill-opacity: .12; }
+  .tab-bar a:active { transform: scale(.92); background: var(--tile); }
+  .shell > main { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+}
+.sn-links a { min-height: 50px; font-size: 16px; }
+.sn-links svg { width: 22px; height: 22px; }
+
+/* ---------- Ajustes en Mi cuenta ---------- */
+.tema-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: var(--tile); border-radius: 16px; }
+.tema-seg button { min-height: 46px; border: 0; border-radius: 12px; background: transparent; color: var(--text-2); font: inherit; font-weight: 600; cursor: pointer; transition: background .2s, color .2s; }
+.tema-seg button.on { background: var(--surface); color: var(--text); }
+.btn-salir { width: 100%; min-height: 50px; border: 0; border-radius: 14px; background: var(--tile); color: var(--critical); font: inherit; font-weight: 600; cursor: pointer; }
+
+/* ---------- Animaciones ---------- */
+@keyframes subir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes crecer-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes crecer-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.anim, .shell section.card, .shell .v-card { animation: subir .5s cubic-bezier(.2,.8,.2,1) both; }
+.wz-next, .btn-ok, .cfg-actions button, .pick-op, .v-accesos a, .day-card { transition: transform .15s, opacity .15s; }
+.wz-next:active, .btn-ok:active, .cfg-actions button:active, .pick-op:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) {
+  .anim, .shell section.card, .shell .v-card, .hd-barra i, .dd-col i { animation: none !important; }
+  .tab-bar a, .wz-next { transition: none; }
+}
