@@ -276,12 +276,12 @@ export default async function Page() {
       const k = kwhPorDia.get(iso);
       const et = i === 0 || (i + 1) % 5 === 0 || i === duracionCiclo - 1 ? String(new Date(ini + i * 86400000).getUTCDate()) : '';
       if (k != null && k > 0) {
-        barrasCiclo.push({ key: iso, et, alto: Math.max(6, Math.round((k / topeBarras) * 150)), clase: k > ritmoMeta ? 'alto' : 'ok', titulo: `${fmtDate(iso)}: ${k} kWh` });
+        barrasCiclo.push({ key: iso, et, alto: Math.max(6, Math.round((k / topeBarras) * 150)), clase: k > ritmoMeta ? 'alto' : 'ok', titulo: `${fechaCorta(iso)} · ${k} kWh` });
       } else if (iso < hoyISO2) {
         pendientes++;
-        barrasCiclo.push({ key: iso, et, alto: Math.round(150 * 0.4), clase: 'pend', titulo: `${fmtDate(iso)}: pendiente de publicar` });
+        barrasCiclo.push({ key: iso, et, alto: Math.round(150 * 0.4), clase: 'pend', titulo: `${fechaCorta(iso)} · pendiente de publicar` });
       } else {
-        barrasCiclo.push({ key: iso, et, alto: 8, clase: 'futuro', titulo: fmtDate(iso) });
+        barrasCiclo.push({ key: iso, et, alto: 8, clase: 'futuro', titulo: `${fechaCorta(iso)} · todavía no llega` });
       }
     }
   }
@@ -403,8 +403,9 @@ export default async function Page() {
               <figure className="dd-barras" role="img" aria-label={`Consumo diario del ciclo; ${pendientes} días pendientes de publicar`} style={{ ['--ritmo' as any]: `${Math.round((ritmoMeta / topeBarras) * 150)}px` }}>
                 <div className="dd-ritmo" aria-hidden="true" />
                 {barrasCiclo.map((d, i) => (
-                  <div key={d.key} className="dd-col">
-                    <i className={d.clase} style={{ height: `${d.alto}px`, animationDelay: `${0.2 + i * 0.015}s` }} title={d.titulo} />
+                  <div key={d.key} className="dd-col" tabIndex={0} aria-label={d.titulo}>
+                    <em className="dd-tip" role="tooltip">{d.titulo}</em>
+                    <i className={d.clase} style={{ height: `${d.alto}px`, animationDelay: `${0.2 + i * 0.015}s` }} />
                     <span>{d.et}</span>
                   </div>
                 ))}
@@ -474,7 +475,7 @@ export default async function Page() {
                     <td className="num" data-l="Facturado">{fmtRD(inv.facturado_rd)}</td>
                     <td className="num strong" data-l="Total a pagar">{fmtRD(inv.total_a_pagar)}</td>
                     <td data-l="Vence">{fmtDate(inv.pague_antes_de)}</td>
-                    <td data-l="PDF">{inv.has_pdf ? <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noreferrer">Ver factura</a> : '—'}</td>
+                    <td data-l="PDF"><a className="pdf-link" href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noreferrer">{inv.has_pdf ? 'Ver factura' : 'Bajar PDF'}</a></td>
                   </tr>
                 ))}
               </tbody>

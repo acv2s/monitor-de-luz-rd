@@ -2,6 +2,7 @@ import { sql, ensureSchema } from '@/lib/db';
 import { listarUsuarios } from '@/lib/users';
 import { contratosConMiembros } from '@/lib/contracts';
 import { EnlaceCopiable } from './copiar';
+import { Icono } from '@/components/Icono';
 
 /**
  * Zona de administrador. Todo lo de personas vive aquí: a quién invito, quién
@@ -38,8 +39,8 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
 
   return (
     <section className="card cfg-card wide admin" id="personas">
-      <div className="admin-tag">🔒 Solo tú · administrador</div>
-      <h2><span className="g-ico">👥</span> Personas con acceso</h2>
+      <div className="admin-tag"><Icono e="🔒" solo /> Solo tú · administrador</div>
+      <h2><Icono e="👥" /> Personas con acceso</h2>
       {aviso && <div className="meta-now warn">{aviso}</div>}
       {nuevo && (
         <div className="meta-now">
@@ -76,7 +77,7 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
         <h3>Con cuenta activa</h3>
         {!activos.length ? <p className="mh-note">Todavía nadie más tiene cuenta.</p> : (
           <>
-            <div className="pers-cabecera"><span /><span title="Puede usar el asistente">🤖</span><span /></div>
+            <div className="pers-cabecera"><span /><span title="Puede usar el asistente"><Icono e="🤖" solo /></span><span /></div>
             {activos.map((u) => (
               <div className="pers-item" key={u.id}>
                 <form className="pers-fila" method="post" action="/api/usuarios">
@@ -94,7 +95,7 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
                   <input type="hidden" name="puede_voz" value="true" />
                   <label className="mini-sw" title="Puede usar el asistente">
                     <input type="checkbox" name="puede_asistente" value="true" defaultChecked={u.puede_asistente} />
-                    <span>🤖</span>
+                    <span><Icono e="🤖" solo /></span>
                   </label>
                   <button className="btn-ok" name="accion" value="permisos">Guardar</button>
                 </form>
@@ -132,7 +133,7 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
                 </details>
               </div>
             ))}
-            <small className="mh-note">🤖 asistente y 🎙️ notas de voz corren con <b>tus</b> claves: son gasto tuyo.</small>
+            <small className="mh-note">El asistente y las notas de voz corren con <b>tus</b> claves: son gasto tuyo.</small>
           </>
         )}
       </div>
@@ -165,7 +166,7 @@ export async function PersonasCard({ appUrl, error, nuevo }: { appUrl: string; e
               </label>
             )}
             <label className="cfg-row switch">
-              <span className="cfg-l">🤖 Asistente<small>💳 gasta tu clave de IA</small></span>
+              <span className="cfg-l">Asistente<small>Gasta tu clave de IA</small></span>
               <input type="hidden" name="da_asistente" value="false" />
               <input type="checkbox" name="da_asistente" value="true" />
             </label>

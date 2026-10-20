@@ -1081,3 +1081,86 @@ header.app-head { position: static; background: none; backdrop-filter: none; -we
   .anim, .shell section.card, .shell .v-card, .hd-barra i, .dd-col i { animation: none !important; }
   .tab-bar a, .wz-next { transition: none; }
 }
+
+/* Día a día: al pasar el mouse o tocar una barra, los kWh exactos de ese día */
+.dd-barras { padding-top: 46px; height: 228px; }
+.dd-col { cursor: pointer; outline: none; }
+.dd-col i { transition: filter .15s; }
+.dd-col:hover i, .dd-col:focus i { filter: brightness(1.12); }
+.dd-col:focus-visible i { outline: 2px solid var(--text); outline-offset: 2px; }
+.dd-tip {
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translate(-50%, 4px);
+  background: var(--ink); color: var(--on-ink); font-style: normal; font-size: 13px; font-weight: 600;
+  white-space: nowrap; padding: 6px 10px; border-radius: 10px; pointer-events: none;
+  opacity: 0; transition: opacity .15s, transform .15s; z-index: 5;
+}
+.dd-col { position: relative; }
+.dd-col i ~ span { z-index: 1; }
+.dd-col:hover .dd-tip, .dd-col:focus .dd-tip { opacity: 1; transform: translate(-50%, 0); }
+.dd-col:nth-child(2) .dd-tip, .dd-col:nth-child(3) .dd-tip, .dd-col:nth-child(4) .dd-tip { left: 0; transform: translate(0, 4px); }
+.dd-col:nth-child(2):hover .dd-tip, .dd-col:nth-child(3):hover .dd-tip, .dd-col:nth-child(4):hover .dd-tip,
+.dd-col:nth-child(2):focus .dd-tip, .dd-col:nth-child(3):focus .dd-tip, .dd-col:nth-child(4):focus .dd-tip { transform: translate(0, 0); }
+.dd-col:nth-last-child(-n+3) .dd-tip { left: auto; right: 0; transform: translate(0, 4px); }
+.dd-col:nth-last-child(-n+3):hover .dd-tip, .dd-col:nth-last-child(-n+3):focus .dd-tip { transform: translate(0, 0); }
+
+/* ===================== Administración y formularios, pulidos ===================== */
+.g-ico {
+  width: 38px; height: 38px; flex: 0 0 auto; border-radius: 12px; background: var(--tile); color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; margin-right: 10px; font-size: 0;
+}
+.g-ico svg { width: 21px; height: 21px; }
+h2:has(> .g-ico) { display: flex; align-items: center; gap: 0; }
+.admin-tag svg, .pers-cabecera svg, .mini-sw svg { width: 18px; height: 18px; }
+
+/* Encabezado de Configuración, como el resto de la app */
+.shell header.top:not(.app-head) h1 { font-size: clamp(26px, 5vw, 32px); font-weight: 600; letter-spacing: -0.02em; }
+.shell header.top:not(.app-head) .sub { font-size: 15px; color: var(--muted); }
+
+/* Tarjeta de Personas y bloques: planos, sin degradado ni borde de color */
+.cfg-card.admin { background: var(--surface) !important; border: 0 !important; }
+.admin-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--chip-orange); color: var(--pill-alerta); border: 0; border-radius: 999px; padding: 5px 11px; font-size: 12px; }
+.pers-bloque { border-top: 0; margin-top: 18px; padding-top: 0; }
+.pers-bloque.urgente { border-left: 0 !important; background: var(--chip-orange) !important; border-radius: 18px; padding: 16px 18px; }
+.pers-bloque h3 { font-size: 15px; }
+.resumen-fila .rf { border: 0 !important; background: var(--tile); border-radius: 999px; padding: 6px 12px; font-size: 13.5px; }
+.resumen-fila .rf.pend { background: var(--chip-orange); color: var(--pill-alerta); }
+
+/* Cada persona: nombre · permiso del asistente · Guardar (3 columnas, el botón entero) */
+.pers-cabecera, .pers-fila { grid-template-columns: minmax(0, 1fr) 46px auto !important; gap: 12px; }
+.pers-cabecera { color: var(--muted); }
+.pers-cabecera > span:nth-child(2) { display: flex; justify-content: center; }
+.pers-item { border-bottom: 1px solid var(--tile); padding: 12px 0; }
+.pers-quien b { font-size: 15.5px; }
+.pers-quien small { font-size: 13px; }
+.mini-sw span { width: 44px; height: 44px; border-radius: 12px; border: 0 !important; background: var(--tile); color: var(--muted); opacity: 1 !important; filter: none !important; }
+.mini-sw input:checked + span { background: var(--control) !important; color: #FFFFFF; }
+.mini-sw input:focus-visible + span { outline: 2px solid var(--text); outline-offset: 2px; }
+.btn-ok { min-height: 44px; padding: 0 18px; white-space: nowrap; }
+.pers-acc { gap: 10px; }
+.btn-danger { background: transparent; color: var(--critical); border: 1.5px solid currentColor; padding: 0 16px; font-weight: 600; }
+.persona-mas > summary { min-height: 40px; display: flex; align-items: center; color: var(--text-2); font-weight: 500; cursor: pointer; }
+
+/* Interruptores: azul de control, como el diseño */
+.cfg-row.switch input[type="checkbox"]:checked, .sw input:checked + span, .sw-box.on, input:checked + .sw-box { background: var(--control) !important; }
+.cfg-row.switch input[type="checkbox"] { background: var(--track); border: 0; }
+.sw span { background: var(--track); }
+
+/* Exportar / importar */
+.exp-btns button { min-height: 46px; background: var(--tile) !important; color: var(--text) !important; }
+.exp-btns button[type="submit"]:last-child { background: var(--ink) !important; color: var(--on-ink) !important; }
+input[type="file"] { font: inherit; font-size: 14px; color: var(--text-2); }
+input[type="file"]::file-selector-button {
+  min-height: 44px; padding: 0 16px; margin-right: 12px; border: 0; border-radius: 12px;
+  background: var(--tile); color: var(--text); font: inherit; font-weight: 600; cursor: pointer;
+}
+.paso-n { background: var(--tile) !important; color: var(--text) !important; font-weight: 700; }
+.cfg-link { color: var(--text); font-weight: 600; }
+.cfg-card.off { opacity: 1; }
+.cfg-card.off .sec-title h2 { color: var(--text-2); }
+
+/* Enlace del PDF en la tabla de facturas */
+.pdf-link { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 10px; background: var(--tile); font-size: 13px; font-weight: 600; text-decoration: none; }
+.pers-bloque.urgente .pers-fila { grid-template-columns: minmax(0, 1fr) auto !important; }
+.pers-bloque.urgente .pers-acc { margin-top: 0; flex-wrap: nowrap; }
+@media (max-width: 520px) { .pers-bloque.urgente .pers-fila { grid-template-columns: 1fr !important; } }
+.pers-cabecera { display: none !important; }

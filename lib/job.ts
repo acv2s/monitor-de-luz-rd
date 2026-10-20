@@ -213,16 +213,11 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
  * ventana de retención. Los datos leídos (kWh, montos, tramos, análisis y el
  * texto extraído) se conservan siempre: son la base de todos los cálculos.
  */
-async function purgeOldPdfs(log: string[]) {
-  const PDF_RETENTION_MONTHS = await settingNumber('PDF_RETENTION_MONTHS');
-  if (!(PDF_RETENTION_MONTHS > 0)) return;
-  const db = sql();
-  const purged = await db<{ id: string }[]>`
-    UPDATE invoices SET pdf = NULL
-    WHERE pdf IS NOT NULL AND parsed_ok
-      AND fecha_emision < (CURRENT_DATE - ${`${PDF_RETENTION_MONTHS} months`}::interval)
-    RETURNING id`;
-  if (purged.length) log.push(`PDFs archivados (datos conservados): ${purged.length}`);
+async function purgeOldPdfs(_log: string[]) {
+  // Los PDF se guardan PARA SIEMPRE: la distribuidora va borrando las
+  // facturas viejas de su portal y esta app es el archivo de cada cuenta.
+  // Antes había una ventana de retención (y un deslizador con mínimo de 1
+  // mes que la encendía sin querer); ya no se borra nada.
 }
 
 async function syncInvoices(client: PortalClient, c: Contrato, nic: string, dailyRows: { day: string; kwh: number }[], log: string[]) {

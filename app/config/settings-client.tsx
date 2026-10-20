@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Icono } from '@/components/Icono';
 
 export interface CampoEstado { clave: string; valor: string; desdeEnv: boolean; secreta: boolean }
 export type Campos = Record<string, CampoEstado>;
@@ -68,7 +69,7 @@ export function Seccion({
       <form method="post" action="/api/settings" className="cfg">
         <div className="sec-head">
           <div className="sec-title">
-            <h2><span className="g-ico">{icono}</span> {titulo}</h2>
+            <h2><Icono e={icono} /> {titulo}</h2>
             <p className="desc">{desc}</p>
           </div>
           <input type="hidden" name={clave} value="false" />

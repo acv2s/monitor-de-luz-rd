@@ -2,6 +2,7 @@ import { settingsView } from '@/lib/settings';
 import { getMeta } from '@/lib/goal';
 import { fmtRD } from '@/lib/analysis';
 import { AsistenteBody, Seccion, Clave, Deslizador, type Campos } from './settings-client';
+import { Icono } from '@/components/Icono';
 
 /** Panel de configuración completo. Todo se llena aquí, sin tocar el hosting. */
 export async function SettingsForm() {
@@ -15,7 +16,7 @@ export async function SettingsForm() {
       {/* La meta y la cuenta de luz viven en UN solo lugar: Mi cuenta.
           Tenerlas también aquí era un duplicado que confundía. */}
       <section className="card cfg-card wide">
-        <h2><span className="g-ico">⚡</span> Tu meta y tu cuenta de luz</h2>
+        <h2><Icono e="⚡" /> Tu meta y tu cuenta de luz</h2>
         <p className="desc">
           {meta.modo === 'dinero' && meta.rd
             ? <>Meta actual: pagar menos de <b>{fmtRD(meta.rd)}</b> al mes ≈ <b>{meta.kwh} kWh</b>. </>
@@ -26,7 +27,7 @@ export async function SettingsForm() {
       </section>
 
       <section className="card cfg-card">
-        <h2><span className="g-ico">🔔</span> Cuándo avisarte</h2>
+        <h2><Icono e="🔔" /> Cuándo avisarte</h2>
         <p className="desc">Qué tan encima quieres que esté el monitor.</p>
         <form method="post" action="/api/settings" className="cfg">
           <Deslizador clave="KWH_WARN_RATIO" etiqueta="Avisarme cuando lleve consumido"
@@ -37,10 +38,6 @@ export async function SettingsForm() {
             ayuda="Comparado con tu promedio diario. Más bajo = más estricto."
             min={1.2} max={2.5} paso={0.1} inicial={Number(campos.DAILY_SPIKE_RATIO?.valor) || 1.6}
             formato="multiplo" />
-          <Deslizador clave="PDF_RETENTION_MONTHS" etiqueta="Guardar el PDF de las facturas por"
-            ayuda="Los datos leídos se guardan siempre; esto solo afecta el archivo PDF."
-            min={1} max={24} paso={1} inicial={Number(campos.PDF_RETENTION_MONTHS?.valor) || 12}
-            formato="meses" />
           <div className="cfg-actions"><button type="submit">Guardar</button></div>
         </form>
       </section>

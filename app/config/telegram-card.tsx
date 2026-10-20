@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db';
 import { setting } from '@/lib/settings';
+import { Icono } from '@/components/Icono';
 
 /** Averigua el @usuario del bot para poder enlazar directo al chat. */
 async function botUsername(): Promise<string | null> {
@@ -34,7 +35,7 @@ export async function TelegramCard({ appUrl }: { appUrl: string }) {
 
   return (
     <section className="card cfg-card wide">
-      <h2><span className="g-ico">👥</span> Quién puede usar el bot</h2>
+      <h2><Icono e="👥" /> Quién puede usar el bot</h2>
       <p className="desc">
         Solo las personas autorizadas reciben los avisos y pueden conversar con el bot.
         Cualquiera que le escriba aparece aquí abajo esperando tu aprobación.

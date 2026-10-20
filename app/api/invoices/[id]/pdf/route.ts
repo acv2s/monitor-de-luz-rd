@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, ensureSchema } from '@/lib/db';
 import { leerCookie, COOKIE } from '@/lib/session';
-import { contratoDeUsuario } from '@/lib/contracts';
+import { contratosDeUsuario, type Contrato } from '@/lib/contracts';
+import { PortalClient } from '@/lib/portal';
+import { distribuidora } from '@/lib/utilities';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 function page(title: string, detail: string, status: number) {
   return new NextResponse(
@@ -32,25 +35,34 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     // probando números en la URL.
     const sesion = await leerCookie(req.cookies.get(COOKIE)?.value, process.env.DASHBOARD_PASSWORD || '');
     if (!sesion) return page('Necesitas entrar', 'Entra a la app para ver tus facturas.', 401);
-    const contrato = await contratoDeUsuario(sesion.uid);
-    const cid = contrato?.id ?? null;
+    // Todas las cuentas que esta persona puede ver (tiene varias, o se las
+    // compartieron). Los id de la base llegan como texto: se comparan como número.
+    const mias = await contratosDeUsuario(sesion.uid);
 
     // Se mira primero si la factura existe (sin filtrar), para distinguir "no
-    // es tuya" de "no está guardada" y de "el PDF ya se archivó".
-    const [factura] = await sql()<{ pdf: Uint8Array | null; contract_id: number | null }[]>`
+    // es tuya" de "no está guardada".
+    const [factura] = await sql()<{ pdf: Uint8Array | null; contract_id: string | number | null }[]>`
       SELECT pdf, contract_id FROM invoices WHERE id = ${id}`;
     if (!factura) {
-      return page('Factura no encontrada', 'Esa factura no está guardada en la app.', 404);
+      return page('Factura no encontrada', 'Esa factura todavía no se ha leído del portal. Se baja sola en la próxima sincronización.', 404);
     }
-    if (cid != null && factura.contract_id !== cid) {
-      return page('Factura de otra cuenta', 'Esta factura no pertenece a tu cuenta de luz.', 403);
+    const dueno = mias.find((c) => c.id === Number(factura.contract_id));
+    if (!dueno) {
+      return page('Factura de otra cuenta', 'Esta factura no pertenece a tus cuentas de luz.', 403);
     }
+
+    // Sin PDF guardado: se baja AHORA del portal y se guarda para siempre.
+    // La distribuidora va borrando las facturas viejas; la app es el archivo.
     if (!factura.pdf) {
-      return page(
-        'PDF archivado',
-        'Los datos de esta factura están guardados, pero su PDF ya no: se borra al pasar la ventana de retención para ahorrar espacio. Puedes cambiar esa ventana en Configuración.',
-        404,
-      );
+      const bajado = await bajarYGuardar(id, dueno);
+      if (!bajado) {
+        return page(
+          'No se pudo bajar el PDF',
+          'El portal de la distribuidora no lo entregó ahora mismo (o ya lo borró de su lado). Se vuelve a intentar solo en cada sincronización.',
+          502,
+        );
+      }
+      factura.pdf = bajado;
     }
 
     // Comprobar que lo guardado ES un PDF. Si no y se manda igual como
@@ -77,5 +89,20 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   } catch (e: any) {
     console.error('[invoice-pdf]', id, e);
     return page('No se pudo abrir la factura', e.message, 500);
+  }
+}
+
+/** Baja el PDF de la factura del portal con las credenciales de su cuenta y lo guarda. */
+async function bajarYGuardar(id: string, c: Contrato): Promise<Uint8Array | null> {
+  if (!c.email || !c.password) return null;
+  try {
+    const cliente = new PortalClient(c.email, c.password, distribuidora(c.utility).base);
+    await cliente.login();
+    const pdf = await cliente.getInvoicePdf(id);
+    await sql()`UPDATE invoices SET pdf = ${Buffer.from(pdf)} WHERE id = ${id}`;
+    return pdf;
+  } catch (e: any) {
+    console.error('[invoice-pdf] no se pudo bajar del portal', id, e?.message);
+    return null;
   }
 }

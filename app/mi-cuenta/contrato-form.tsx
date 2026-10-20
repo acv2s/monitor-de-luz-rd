@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Icono } from '@/components/Icono';
 
 interface Contrato {
   id: number; nombre: string | null; utility: string; email: string | null;
@@ -95,7 +96,7 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado, ar
   return (
     <form method="post" action="/api/contrato" className="cfg-grid">
       <section className="card cfg-card wide">
-        <h2><span className="g-ico">🎯</span> Tu meta</h2>
+        <h2><Icono e="🎯" /> Tu meta</h2>
         <p className="desc">De aquí salen tus avisos, la proyección y los consejos.</p>
         <div className="pick">
           <button type="button" className={`pick-op ${modo === 'dinero' ? 'on' : ''}`} onClick={() => setModo('dinero')}>
@@ -122,7 +123,7 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado, ar
       </section>
 
       <section className="card cfg-card wide">
-        <h2><span className="g-ico">📬</span> Mensajes automáticos</h2>
+        <h2><Icono e="📬" /> Mensajes automáticos</h2>
         <p className="desc">
           Un resumen diario por Telegram con tu consumo y los días que se dispararon.
           Tú decides si lo quieres y a qué hora; los avisos importantes (cuando vas a pasarte
@@ -145,7 +146,7 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado, ar
       </section>
 
       <section className="card cfg-card wide">
-        <h2><span className="g-ico">⚡</span> Tu oficina virtual</h2>
+        <h2><Icono e="⚡" /> Tu oficina virtual</h2>
         <p className="desc">Son las mismas credenciales con las que entras a ver tu factura. Solo se usan para leer tus datos.</p>
 
         <label className="cfg-row">

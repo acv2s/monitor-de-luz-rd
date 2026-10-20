@@ -4,6 +4,7 @@ import { SideNav } from '@/components/SideNav';
 import { TelegramCard } from './telegram-card';
 import { PersonasCard } from './personas-card';
 import { urlDeLaApp } from '@/lib/appurl';
+import { Icono } from '@/components/Icono';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ export default async function ConfigPage({ searchParams }: { searchParams: Promi
 
       {dbError && (
         <section className="card cfg-card wide">
-          <h2><span className="g-ico">⚠️</span> No hay conexión con la base de datos</h2>
+          <h2><Icono e="⚠️" /> No hay conexión con la base de datos</h2>
           <p className="desc">
             Sin base de datos no se puede guardar nada. Crea una (Storage → Neon en tu hosting) y
             asegúrate de que la variable <code>DATABASE_URL</code> esté puesta.
@@ -46,7 +47,7 @@ export default async function ConfigPage({ searchParams }: { searchParams: Promi
       <section className="card cfg-card wide primeros">
         <div className="sec-head">
           <div className="sec-title">
-            <h2><span className="g-ico">🚀</span> Primeros pasos</h2>
+            <h2><Icono e="🚀" /> Primeros pasos</h2>
             <p className="desc">¿Prefieres que te guiemos paso a paso en vez de llenar todo esto a mano?</p>
           </div>
           <a className="wz-next" href="/bienvenida">Empezar</a>
@@ -56,7 +57,7 @@ export default async function ConfigPage({ searchParams }: { searchParams: Promi
       <SettingsForm />
 
       <section className="card cfg-card wide">
-        <h2><span className="g-ico">📦</span> Llevarte tu configuración</h2>
+        <h2><Icono e="📦" /> Llevarte tu configuración</h2>
         <p className="desc">
           Descarga todo lo que llenaste aquí en un archivo y cárgalo en otra instalación
           (otra dirección, otra persona) para dejarla lista sin repetir nada.

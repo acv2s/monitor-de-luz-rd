@@ -11,6 +11,7 @@ import { ContratoForm } from './contrato-form';
 import { Ajustes } from '@/components/Ajustes';
 import { SideNav } from '@/components/SideNav';
 import { tgLoginActivo } from '@/lib/tg-login';
+import { Icono } from '@/components/Icono';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +74,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
         </section>
       ) : !puedeEditar ? (
         <section className="card">
-          <h2><span className="g-ico">🤝</span> Cuenta compartida</h2>
+          <h2><Icono e="🤝" /> Cuenta compartida</h2>
           <p className="desc">
             Estás viendo la cuenta de <b>{dueno}</b>. Puedes ver el consumo, las gráficas y las facturas,
             pero solo esa persona puede cambiar las credenciales y la meta.
@@ -99,7 +100,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
 
       {contrato && (
         <section className="card">
-          <h2><span className="g-ico">📦</span> Tus datos son tuyos</h2>
+          <h2><Icono e="📦" /> Tus datos son tuyos</h2>
           <p className="desc">
             Descarga todo lo guardado de tu cuenta (consumo diario, mensual y facturas)
             en un archivo, cuando quieras.
@@ -110,7 +111,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
 
       {contrato && puedeEditar && cuentas.filter((c) => (sesion?.uid === 'maestro' ? c.owner_id === null : c.owner_id === sesion?.uid)).length > 1 && (
         <section className="card">
-          <h2><span className="g-ico">🗑️</span> Eliminar esta cuenta</h2>
+          <h2><Icono e="🗑️" /> Eliminar esta cuenta</h2>
           <p className="desc">
             Borra <b>{contrato.nombre || `la cuenta ${contrato.id}`}</b> con su consumo, sus facturas y sus
             PDF guardados. No se puede deshacer; tus demás cuentas no se tocan.
@@ -126,7 +127,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
 
       {sesion && (
         <section className="card" id="tg-login">
-          <h2><span className="g-ico">🔑</span> Entrar desde Telegram</h2>
+          <h2><Icono e="🔑" /> Entrar desde Telegram</h2>
           {q.tg === 'on' && <div className="meta-now">Listo: ya puedes escribirle <b>panel</b> al bot y te manda el enlace para entrar.</div>}
           {q.tg === 'mal' && <div className="meta-now warn">Ese código no es válido o ya venció. Escríbele <b>panel</b> al bot para que te mande uno nuevo.</div>}
           {tgActivo ? (
@@ -162,7 +163,7 @@ export default async function MiCuenta({ searchParams }: { searchParams: Promise
 
       {codigo && (
         <section className="card">
-          <h2><span className="g-ico">💬</span> El bot de Telegram</h2>
+          <h2><Icono e="💬" /> El bot de Telegram</h2>
           <p className="desc">
             Te avisa antes de que la factura se dispare y le puedes preguntar cómo vas.
             Ábrelo y mándale este código una sola vez para que sepa que eres tú.
