@@ -233,3 +233,50 @@ export function Deslizador({
     </div>
   );
 }
+
+/**
+ * Notas de voz, compacto: se elige el motor que ENTIENDE los audios y solo se
+ * pide su clave. Contestar hablando y el ID de la voz quedan plegados.
+ * (El servidor usa Groq si tiene clave y si no OpenAI; el selector solo
+ * decide qué clave se enseña.)
+ */
+export function VozBody({ campos }: { campos: Campos }) {
+  const hayGroq = !!campos.GROQ_API_KEY?.valor;
+  const hayOpenai = !!campos.OPENAI_API_KEY?.valor;
+  const [motor, setMotor] = useState<'groq' | 'openai'>(!hayGroq && hayOpenai ? 'openai' : 'groq');
+  const [hablar, setHablar] = useState((campos.VOICE_REPLIES?.valor || '') === 'true');
+  const vacia = (k: string) => campos[k] ?? { clave: k, valor: '', desdeEnv: false, secreta: true };
+
+  return (
+    <>
+      <span className="cfg-l">Motor para entender tus audios</span>
+      <div className="pick" role="radiogroup" aria-label="Motor de transcripción">
+        <button type="button" role="radio" aria-checked={motor === 'groq'} className={`pick-op ${motor === 'groq' ? 'on' : ''}`} onClick={() => setMotor('groq')}>
+          <b>Groq</b><small>Gratis y rápido · recomendado</small>
+        </button>
+        <button type="button" role="radio" aria-checked={motor === 'openai'} className={`pick-op ${motor === 'openai' ? 'on' : ''}`} onClick={() => setMotor('openai')}>
+          <b>OpenAI</b><small>Si ya tienes clave de ChatGPT</small>
+        </button>
+      </div>
+      {motor === 'groq'
+        ? <Clave e={vacia('GROQ_API_KEY')} etiqueta="Clave de Groq" enlace={{ texto: 'Crear clave en Groq', url: 'https://console.groq.com/keys' }} />
+        : <Clave e={vacia('OPENAI_API_KEY')} etiqueta="Clave de OpenAI" enlace={{ texto: 'Crear clave en OpenAI', url: 'https://platform.openai.com/api-keys' }} />}
+
+      <label className="cfg-row switch">
+        <span className="cfg-l">Contestarme con nota de voz<small>Opcional</small></span>
+        <input type="hidden" name="VOICE_REPLIES" value="false" />
+        <input type="checkbox" name="VOICE_REPLIES" value="true" checked={hablar} onChange={(ev) => setHablar(ev.target.checked)} />
+      </label>
+      {hablar && (
+        <details className="sub-plegable">
+          <summary>Voz más natural (ElevenLabs, opcional)</summary>
+          <Clave e={vacia('ELEVENLABS_API_KEY')} etiqueta="Clave de ElevenLabs" ayuda="Sin ella se contesta con la voz de OpenAI." enlace={{ texto: 'Crear clave en ElevenLabs', url: 'https://elevenlabs.io/app/settings/api-keys' }} />
+          <label className="cfg-row">
+            <span className="cfg-l">ID de la voz<small>Vacío = la voz por defecto.</small></span>
+            <input type="text" name="ELEVENLABS_VOICE_ID" defaultValue={campos.ELEVENLABS_VOICE_ID?.valor ?? ''} autoComplete="off" />
+          </label>
+        </details>
+      )}
+    </>
+  );
+}

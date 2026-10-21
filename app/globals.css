@@ -1164,3 +1164,14 @@ input[type="file"]::file-selector-button {
 .pers-bloque.urgente .pers-acc { margin-top: 0; flex-wrap: nowrap; }
 @media (max-width: 520px) { .pers-bloque.urgente .pers-fila { grid-template-columns: 1fr !important; } }
 .pers-cabecera { display: none !important; }
+
+/* Apariencia y salir: abajo a la izquierda de la barra lateral (PC); en móvil, en Cuenta */
+.sn-ajustes { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 4px; }
+.sn-ajustes-t { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 0 6px; }
+.sn-ajustes .tema-seg { background: var(--surface); }
+.sn-ajustes .tema-seg button { min-height: 38px; font-size: 13px; }
+.sn-ajustes .tema-seg button.on { background: var(--ink); color: var(--on-ink); }
+.sn-salir { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 14px; border: 0; border-radius: 12px; background: transparent; color: var(--text-2); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; }
+.sn-salir:hover { background: var(--surface); color: var(--critical); }
+.sn-salir svg { width: 20px; height: 20px; }
+@media (min-width: 1024px) { .solo-movil { display: none !important; } }

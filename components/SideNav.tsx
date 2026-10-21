@@ -1,3 +1,5 @@
+import { Ajustes } from './Ajustes';
+
 /**
  * Navegación de la app. En PC es una barra lateral; en móvil, una barra de
  * pestañas abajo, como una aplicación. Las mismas secciones en las dos, y
@@ -47,6 +49,7 @@ export function SideNav({ actual, admin = false }: { actual: Actual; admin?: boo
             </a>
           ))}
         </div>
+        <Ajustes compacto />
       </nav>
       <nav className="tab-bar" aria-label="Principal" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
         {items.map((it) => (

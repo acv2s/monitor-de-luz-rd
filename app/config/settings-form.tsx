@@ -1,7 +1,7 @@
 import { settingsView } from '@/lib/settings';
 import { getMeta } from '@/lib/goal';
 import { fmtRD } from '@/lib/analysis';
-import { AsistenteBody, Seccion, Clave, Deslizador, type Campos } from './settings-client';
+import { AsistenteBody, VozBody, Seccion, Clave, Deslizador, type Campos } from './settings-client';
 import { Icono } from '@/components/Icono';
 
 /** Panel de configuración completo. Todo se llena aquí, sin tocar el hosting. */
@@ -71,28 +71,8 @@ export async function SettingsForm() {
       </Seccion>
 
       <Seccion icono="🎙️" titulo="Notas de voz" clave="VOICE_ENABLED" inicial={on('VOICE_ENABLED')}
-        desc="Mándale audios al bot y que te conteste hablando." ancho>
-        <ol className="pasos mini">
-          <li><span className="paso-n">1</span><div><b>Para que ENTIENDA tus audios</b>
-            <small>Crea una cuenta gratis en Groq y pega su clave. Es lo único obligatorio.</small>
-            <a className="cfg-link" href="https://console.groq.com/keys" target="_blank" rel="noreferrer">Crear clave en Groq ↗</a></div></li>
-          <li><span className="paso-n">2</span><div><b>Para que te CONTESTE hablando (opcional)</b>
-            <small>Enciende el interruptor de abajo y pon una clave de ElevenLabs (voz más natural) o de OpenAI.</small>
-            <a className="cfg-link" href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noreferrer">Crear clave en ElevenLabs ↗</a></div></li>
-        </ol>
-        <Clave e={campos.GROQ_API_KEY} etiqueta="Clave de Groq" ayuda="Transcribe tus notas de voz." />
-        <Clave e={campos.OPENAI_API_KEY} etiqueta="Clave de OpenAI"
-          ayuda="Alternativa para transcribir y para la voz. También sirve si eliges ChatGPT como asistente." />
-        <label className="cfg-row switch">
-          <span className="cfg-l">Contestarme con nota de voz</span>
-          <input type="hidden" name="VOICE_REPLIES" value="false" />
-          <input type="checkbox" name="VOICE_REPLIES" value="true" defaultChecked={on('VOICE_REPLIES')} />
-        </label>
-        <Clave e={campos.ELEVENLABS_API_KEY} etiqueta="Clave de ElevenLabs" ayuda="Opcional: voz mucho más natural en español." />
-        <label className="cfg-row">
-          <span className="cfg-l">ID de la voz<small>Opcional. Se usa una por defecto si lo dejas vacío.</small></span>
-          <input type="text" name="ELEVENLABS_VOICE_ID" defaultValue={campos.ELEVENLABS_VOICE_ID?.valor ?? ''} autoComplete="off" />
-        </label>
+        desc="Mándale audios al bot; si quieres, te contesta hablando.">
+        <VozBody campos={campos} />
       </Seccion>
     </div>
   );
