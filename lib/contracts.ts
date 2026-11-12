@@ -20,6 +20,8 @@ export interface Contrato {
   resumen_diario: boolean;
   /** A qué hora (de República Dominicana, 0–23) le llega el resumen. */
   resumen_hora: number;
+  /** Día del mes en que corta el ciclo; null = se estima. */
+  dia_corte: number | null;
 }
 
 /**
@@ -142,7 +144,8 @@ export async function guardarContrato(id: number, datos: Partial<Contrato>): Pro
       nombre = ${a.nombre}, utility = ${a.utility}, email = ${a.email},
       password = ${a.password}, nic = ${a.nic}, goal_mode = ${a.goal_mode},
       budget_rd = ${a.budget_rd}, kwh_threshold = ${a.kwh_threshold},
-      resumen_diario = ${a.resumen_diario}, resumen_hora = ${a.resumen_hora}
+      resumen_diario = ${a.resumen_diario}, resumen_hora = ${a.resumen_hora},
+      dia_corte = ${a.dia_corte ?? null}
     WHERE id = ${id}`;
   // Si cambiaron las credenciales, lo verificado antes ya no vale.
   if (a.email !== c[0].email || a.password !== c[0].password) {

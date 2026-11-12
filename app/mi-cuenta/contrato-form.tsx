@@ -8,7 +8,7 @@ interface Contrato {
   id: number; nombre: string | null; utility: string; email: string | null;
   password: string | null; nic: string | null; goal_mode: string;
   budget_rd: number | null; kwh_threshold: number;
-  resumen_diario: boolean; resumen_hora: number;
+  resumen_diario: boolean; resumen_hora: number; dia_corte?: number | null;
 }
 
 interface Props {
@@ -172,6 +172,10 @@ export function ContratoForm({ contrato, distribuidoras, primera, verificado, ar
         <label className="cfg-row">
           <span className="cfg-l">Contraseña<small>Déjala vacía para no cambiar la que ya está guardada.</small></span>
           <input type="password" name="password" placeholder={contrato.password ? '••••••••' : 'Tu contraseña'} autoComplete="off" />
+        </label>
+        <label className="cfg-row">
+          <span className="cfg-l">Día de cierre del ciclo<small>El día del mes en que corta este contrato (ej. 12). Vacío = se calcula con tus facturas.</small></span>
+          <input type="number" name="dia_corte" min={1} max={31} inputMode="numeric" defaultValue={contrato.dia_corte ?? ''} placeholder="Automático" />
         </label>
         <label className="cfg-row">
           <span className="cfg-l">NIC<small>Si es tu única cuenta puedes dejarlo vacío y se detecta solo. Con varias cuentas bajo el mismo acceso, pon en cada una SU NIC.</small></span>

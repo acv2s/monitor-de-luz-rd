@@ -253,3 +253,7 @@ CREATE TABLE IF NOT EXISTS login_tokens (
   usado_at   TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Día del mes en que corta el ciclo de cada contrato (el 12, el 15…).
+-- Vacío = se estima con la duración de sus facturas.
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS dia_corte SMALLINT;

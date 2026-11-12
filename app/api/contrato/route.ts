@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     budget_rd: presupuesto > 0 ? presupuesto : c.budget_rd,
     kwh_threshold: limite > 0 ? limite : c.kwh_threshold,
     resumen_diario: f.has('resumen_diario') ? marcado(f, 'resumen_diario') : c.resumen_diario,
+    dia_corte: f.has('dia_corte') ? (() => { const d = Number(f.get('dia_corte')); return d >= 1 && d <= 31 ? d : null; })() : c.dia_corte,
     resumen_hora: (() => { const h = Number(f.get('resumen_hora')); return h >= 0 && h <= 23 ? h : c.resumen_hora; })(),
   });
   // Si ya hay correo y contraseña, se arranca la lectura sola: no hay que

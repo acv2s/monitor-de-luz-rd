@@ -96,9 +96,9 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
   const proy = t.proyeccionKwh ?? 0;
   const dias = t.daily.filter((d) => d.kwh > 0);
   const avg = dias.length ? dias.reduce((a, b) => a + b.kwh, 0) / dias.length : 0;
-  const restantes = t.datosHasta && t.fechaUltimaFactura
-    ? Math.max(0, 31 - Math.round((Date.parse(t.datosHasta) - Date.parse(t.fechaUltimaFactura)) / 86400000))
-    : null;
+  const { cierreDelCiclo, diasParaCierre } = await import('./ciclo');
+  const cierre = cierreDelCiclo(t.fechaUltimaFactura, c.dia_corte, 30);
+  const restantes = diasParaCierre(cierre);
   const resumen = `Consumo del ciclo (desde ${fmtDate(t.fechaUltimaFactura)}): <b>${consumo} kWh</b> hasta ${fmtDate(t.datosHasta)}. Proyección del portal: <b>${proy} kWh</b>. Promedio ${avg.toFixed(1)} kWh/día${restantes != null ? `, faltan ~${restantes} días` : ''}.`;
 
   // 1) Ya superó el umbral
@@ -180,7 +180,8 @@ async function evaluateAlerts(c: Contrato, nic: string, t: TeleconsumoData, log:
       '',
       ...dinero,
       '',
-      `📅 <b>Ciclo:</b> ${fmtDate(t.fechaUltimaFactura)} → ${fmtDate(t.datosHasta)}${restantes != null ? ` · faltan ~${restantes} días` : ''}`,
+      `📅 <b>Ciclo:</b> ${fmtDate(t.fechaUltimaFactura)} → ${fmtDate(t.datosHasta)}`,
+      restantes != null ? `⏳ <b>Cierre:</b> ${fmtDate(cierre)} · ${restantes === 0 ? 'hoy o ya cortó' : `faltan ${restantes} ${restantes === 1 ? 'día' : 'días'}`}` : '',
       `⚡ <b>Consumo:</b> ${consumo} kWh de ${THRESHOLD} (${pct}%)`,
       `📈 <b>Proyección al cierre:</b> ${proy} kWh`,
       `📊 <b>Promedio:</b> ${avg.toFixed(1)} kWh/día`,
@@ -479,6 +480,13 @@ export async function runDaily(hora: number | null = null): Promise<RunResult> {
       WHERE CURRENT_DATE >= s.inicio + (COALESCE(d.dur, 30) - 1)::int`
     ).map((r) => r.id),
   );
+  // Con día de cierre fijo: desde un día antes del corte y hasta 6 después
+  // (lo que tarda la distribuidora en emitir), se caza la factura cada corrida.
+  const diaRD = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Santo_Domingo', day: 'numeric' }).format(new Date()));
+  for (const c of todos) {
+    const d = c.dia_corte;
+    if (d && ((diaRD - d + 31) % 31 <= 6 || (d - diaRD + 31) % 31 === 1)) enCorte.add(c.id);
+  }
   const contratos = hora == null
     ? todos
     : todos.filter((c) => (c.resumen_hora ?? 18) === hora || atrasados.has(c.id) || enCorte.has(c.id));

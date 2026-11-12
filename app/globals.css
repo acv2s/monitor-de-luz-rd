@@ -1175,3 +1175,7 @@ input[type="file"]::file-selector-button {
 .sn-salir:hover { background: var(--surface); color: var(--critical); }
 .sn-salir svg { width: 20px; height: 20px; }
 @media (min-width: 1024px) { .solo-movil { display: none !important; } }
+
+/* Días que le faltan al ciclo para cerrar, debajo del título */
+.cierre-chip { align-self: flex-start; margin-top: 6px; display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 600; }
+.cierre-chip.pronto { background: var(--chip-orange); color: var(--pill-alerta); }

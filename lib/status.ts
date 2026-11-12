@@ -54,9 +54,13 @@ async function loadCiclo(cid: number | null) {
   }
   const transcurridos = snap.cycle_start && snap.datos_hasta
     ? Math.round((Date.parse(snap.datos_hasta) - Date.parse(snap.cycle_start)) / 86400000) : 0;
-  const restantes = Math.max(0, 31 - transcurridos);
+  // Cada contrato cierra en su día (si el dueño lo puso); si no, ~30 días.
+  const { cierreDelCiclo, diasParaCierre } = await import('./ciclo');
+  const [ct] = cid != null ? await db<{ dia_corte: number | null }[]>`SELECT dia_corte FROM contracts WHERE id = ${cid}` : [];
+  const cierre = cierreDelCiclo(snap.cycle_start, ct?.dia_corte ?? null, 30);
+  const restantes = diasParaCierre(cierre) ?? Math.max(0, 31 - transcurridos);
   const permitido = restantes > 0 ? Math.max(0, (THRESHOLD - snap.consumo) / restantes) : 0;
-  return { snap, dias, avg, transcurridos, restantes, permitido };
+  return { snap, dias, avg, transcurridos, restantes, permitido, cierre };
 }
 
 /** Mensaje "¿cómo voy?": estado organizado del ciclo con barra y mini-gráfica. */
@@ -64,7 +68,7 @@ export async function statusMessage(cid: number | null = null): Promise<string> 
   const THRESHOLD = await limiteDe(cid);
   const c = await loadCiclo(cid);
   if (!c) return 'Todavía no tengo datos. El monitor corre a diario a la 1:00 pm; espera la primera corrida.';
-  const { snap, dias, avg, transcurridos, restantes, permitido } = c;
+  const { snap, dias, avg, transcurridos, restantes, permitido, cierre } = c;
   const consumo = snap.consumo ?? 0;
   const proy = snap.proyeccion ?? 0;
   const pct = Math.round((consumo / THRESHOLD) * 100);
@@ -85,7 +89,8 @@ export async function statusMessage(cid: number | null = null): Promise<string> 
     '',
     ...dinero,
     '',
-    `📅 <b>Ciclo:</b> ${fmtDate(snap.cycle_start)} → hoy · día ${transcurridos}, faltan ~${restantes}`,
+    `📅 <b>Ciclo:</b> ${fmtDate(snap.cycle_start)} → hoy · día ${transcurridos}`,
+    `⏳ <b>Cierre:</b> ${fmtDate(cierre)} · ${restantes === 0 ? 'hoy o ya cortó' : `faltan ${restantes} ${restantes === 1 ? 'día' : 'días'}`}`,
     ultimo ? `🕓 <b>Última lectura:</b> ${fmtDate(ultimo.day)} · ${ultimo.kwh} kWh` : '',
     `⚡ <b>Consumo del ciclo:</b> ${consumo} kWh de ${THRESHOLD} (${pct}%)`,
     `${barra(pct)}`,

@@ -14,6 +14,7 @@ import { CuentasSwitch } from '@/components/CuentasSwitch';
 import { getPricing, estimateCost } from '@/lib/pricing';
 import { desgloseDe, precioSiguienteKwh } from '@/lib/tarifa';
 import { SideNav } from '@/components/SideNav';
+import { cierreDelCiclo, diasParaCierre } from '@/lib/ciclo';
 
 export const dynamic = 'force-dynamic';
 
@@ -214,9 +215,8 @@ export default async function Page() {
     .slice(0, 6)
     .sort((a: number, b: number) => a - b);
   const duracionCiclo = duraciones.length ? duraciones[Math.floor(duraciones.length / 2)] : 30;
-  const cierreEstimado = snap?.cycle_start
-    ? new Date(Date.parse(snap.cycle_start + 'T00:00:00Z') + duracionCiclo * 86400000).toISOString().slice(0, 10)
-    : null;
+  const cierreEstimado = cierreDelCiclo(snap?.cycle_start, contrato?.dia_corte, duracionCiclo);
+  const faltanCierre = diasParaCierre(cierreEstimado);
   const hoyISO = new Date().toISOString().slice(0, 10);
   const cicloVencido = !!cierreEstimado && hoyISO >= cierreEstimado && daily.length > 1;
 
@@ -297,6 +297,11 @@ export default async function Page() {
             {snap?.nic ? ` · NIC ${snap.nic}` : ''}
           </small>
           <h1>{cierreEstimado ? `Ciclo de ${MESES_LARGO[new Date(cierreEstimado + 'T00:00:00Z').getUTCMonth()]}` : tituloCiclo}</h1>
+          {faltanCierre != null && cierreEstimado && (
+            <span className={`cierre-chip ${faltanCierre <= 3 ? 'pronto' : ''}`}>
+              {faltanCierre === 0 ? 'Cierra hoy o ya cortó' : `Faltan ${faltanCierre} ${faltanCierre === 1 ? 'día' : 'días'} para el cierre`} · {dm(cierreEstimado)}
+            </span>
+          )}
         </div>
       </header>
 
@@ -365,7 +370,7 @@ export default async function Page() {
               {pricing && (
                 <div className="hd-tiles">
                   <div><span>Proyección al cierre</span><b className={vaAPasar ? 'alerta' : 'ok'}>{dias.length ? fmtRD(proyRD) : '—'}</b><small>≈ {proy} kWh{cierreEstimado ? ` al ${dm(cierreEstimado)}` : ''}</small></div>
-                  <div><span>{margenRD >= 0 ? 'Margen hasta la meta' : 'Te pasarías por'}</span><b>{fmtRD(Math.abs(margenRD))}</b><small>~{restantes} días por delante</small></div>
+                  <div><span>{margenRD >= 0 ? 'Margen hasta la meta' : 'Te pasarías por'}</span><b>{fmtRD(Math.abs(margenRD))}</b><small>~{faltanCierre ?? restantes} días por delante</small></div>
                   <div><span>Promedio por día</span><b>{fmtRD(promRD)}</b><small>≈ {avg.toFixed(1)} kWh/día</small></div>
                 </div>
               )}
