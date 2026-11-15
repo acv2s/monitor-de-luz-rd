@@ -221,6 +221,9 @@ async function purgeOldPdfs(_log: string[]) {
   // mes que la encendía sin querer); ya no se borra nada.
 }
 
+/** Hasta cuándo puede trabajar la corrida actual (la función muere a los 60 s). */
+let fechaLimite = Number.POSITIVE_INFINITY;
+
 async function syncInvoices(client: PortalClient, c: Contrato, nic: string, dailyRows: { day: string; kwh: number }[], log: string[]) {
   const THRESHOLD = c.kwh_threshold || await getThreshold();
   const db = sql();
@@ -235,6 +238,18 @@ async function syncInvoices(client: PortalClient, c: Contrato, nic: string, dail
     SELECT id, parsed_ok, (pdf IS NOT NULL) AS has_pdf FROM invoices WHERE nic = ${nic}`;
   const known = new Map(existing.map((r) => [r.id, r.parsed_ok && r.has_pdf]));
 
+  // Toda factura que aparece en el historial queda registrada YA, aunque su
+  // PDF se baje después: así ninguna se pierde si el portal la borra o si a
+  // esta corrida no le alcanza el tiempo, y se puede bajar desde el panel.
+  for (const l of links) {
+    if (known.has(l.id)) continue;
+    await db`
+      INSERT INTO invoices (contract_id, id, nic, fecha_emision, parsed_ok)
+      VALUES (${c.id}, ${l.id}, ${nic}, ${l.fechaEmision}, false)
+      ON CONFLICT (id) DO NOTHING`;
+  }
+  log.push(`historial: ${links.length} facturas en el portal, ${existing.length} ya guardadas antes`);
+
   // de la más vieja a la más nueva, para que "mes anterior" ya exista al analizar
   // (se reintentan también las que quedaron sin PDF guardado)
   const pending = links
@@ -245,14 +260,14 @@ async function syncInvoices(client: PortalClient, c: Contrato, nic: string, dail
   // sola antes del límite: lo ya bajado queda guardado y el resto sigue en la
   // próxima corrida. Antes, quedarse sin tiempo mataba la corrida entera y no
   // se guardaba ninguna factura — el panel se quedaba sin pesos sin decir por qué.
-  const limite = Date.now() + 40_000;
+  const limite = Math.min(Date.now() + 25_000, fechaLimite - 4_000);
   let downloaded = 0;
   for (const link of pending) {
     if (Date.now() > limite) {
       log.push(`sin tiempo en esta corrida: quedan ${pending.length - downloaded} facturas por bajar, siguen en la próxima`);
       break;
     }
-    if (downloaded >= 8) { log.push('quedan facturas por bajar; se continúa mañana'); break; } // límite por corrida
+    if (downloaded >= 12) { log.push('quedan facturas por bajar; se continúa en la próxima corrida'); break; }
     try {
       const pdf = await client.getInvoicePdf(link.pdfUrl);
       downloaded++;
@@ -353,8 +368,20 @@ async function procesarContrato(c: Contrato, log: string[], silencioso = false):
     const nics = c.nic?.trim() ? [c.nic.trim()] : await client.getContracts();
     if (!nics.length) throw new Error('no se encontraron contratos asociados');
 
+    let errorConsumo: any = null;
     for (const nic of nics) {
-      const { data } = await client.getTeleconsumo(nic);
+      let data: TeleconsumoData;
+      try {
+        ({ data } = await client.getTeleconsumo(nic));
+      } catch (e: any) {
+        // Sin consumo de hoy, igual se guardan las facturas: no dependen de esto.
+        errorConsumo = e;
+        apunta(`[${etiqueta}] consumo no disponible (${e?.message}); se guardan las facturas igual`);
+        const dailyRows0 = await db<{ day: string; kwh: number }[]>`
+          SELECT to_char(day,'YYYY-MM-DD') AS day, kwh::float AS kwh FROM daily_consumption WHERE nic = ${nic} ORDER BY day`;
+        await syncInvoices(client, c, nic, dailyRows0, propio);
+        continue;
+      }
       // Cuentas telemedidas: la página trae otras etiquetas y el lector
       // puede tomar la lectura del medidor como "consumo del ciclo". Si el
       // número no cuadra con los días publicados, mandan los días.
@@ -397,6 +424,7 @@ async function procesarContrato(c: Contrato, log: string[], silencioso = false):
         FROM daily_consumption WHERE nic = ${nic} ORDER BY day`;
       await syncInvoices(client, c, nic, dailyRows, propio);
     }
+    if (errorConsumo) throw errorConsumo;
     log.push(...propio.filter((l) => !log.includes(l)));
     await cerrar(true);
     return true;
@@ -431,6 +459,7 @@ export async function runContrato(cid: number, silencioso = true): Promise<RunRe
   if (!c.email || !c.password) {
     return { ok: false, log, error: 'Faltan el correo y la contraseña de tu oficina virtual.' };
   }
+  fechaLimite = Date.now() + 52_000;
   const ok = await procesarContrato(c, log, silencioso);
   return ok ? { ok: true, log } : { ok: false, log, error: log[log.length - 1] ?? 'No se pudo leer tu cuenta.' };
 }
@@ -499,7 +528,18 @@ export async function runDaily(hora: number | null = null): Promise<RunResult> {
 
   const [run] = await db<{ id: number }[]>`INSERT INTO runs DEFAULT VALUES RETURNING id`;
   let fallos = 0;
+  // La función entera tiene 60 s para TODOS los contratos. Primero los que
+  // llevan más tiempo sin una corrida buena; los que no alcancen siguen en la
+  // próxima corrida (la red de rescate los toma por estar atrasados).
+  fechaLimite = Date.now() + 52_000;
+  const ultimas = new Map((await db<{ cid: string; t: string | null }[]>`
+    SELECT contract_id::text AS cid, max(started_at)::text AS t FROM runs WHERE ok GROUP BY contract_id`).map((r) => [Number(r.cid), r.t ?? '']));
+  contratos.sort((a, b) => (ultimas.get(Number(a.id)) ?? '').localeCompare(ultimas.get(Number(b.id)) ?? ''));
   for (const c of contratos) {
+    if (Date.now() > fechaLimite - 12_000) {
+      log.push(`sin tiempo: ${etiquetaDe(c)} y los siguientes quedan para la próxima corrida`);
+      break;
+    }
     // El resumen diario sale a la hora elegida — y también en la corrida de
     // rescate (si el hosting solo dispara el cron una vez al día, esa corrida
     // ES el día de la persona; callarla la dejaría sin resumen para siempre).
